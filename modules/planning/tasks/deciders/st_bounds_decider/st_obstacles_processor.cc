@@ -70,7 +70,7 @@ void STObstaclesProcessor::Init(const double planning_distance,
 }
 
 Status STObstaclesProcessor::MapObstaclesToSTBoundaries(
-    PathDecision* const path_decision) {
+    PathDecision* const path_decision,std::string overtake_obstacle_id) {
   // Sanity checks.
   if (path_decision == nullptr) {
     const std::string msg = "path_decision is nullptr";
@@ -135,7 +135,7 @@ Status STObstaclesProcessor::MapObstaclesToSTBoundaries(
     bool is_caution_obstacle = false;
     double obs_caution_end_t = 0.0;
     if (!ComputeObstacleSTBoundary(*obs_ptr, &lower_points, &upper_points,
-                                   &is_caution_obstacle, &obs_caution_end_t)) {
+                                   &is_caution_obstacle, &obs_caution_end_t,overtake_obstacle_id)) {
       // Obstacle doesn't appear on ST-Graph.
       continue;
     }
@@ -473,14 +473,20 @@ void STObstaclesProcessor::SetObstacleDecision(
 bool STObstaclesProcessor::ComputeObstacleSTBoundary(
     const Obstacle& obstacle, std::vector<STPoint>* const lower_points,
     std::vector<STPoint>* const upper_points, bool* const is_caution_obstacle,
-    double* const obs_caution_end_t) {
+    double* const obs_caution_end_t,std::string overtake_obstacle_id) {
   lower_points->clear();
   upper_points->clear();
   *is_caution_obstacle = false;
   const auto& adc_path_points = path_data_.discretized_path();
   const auto& obs_trajectory = obstacle.Trajectory();
 
-  if (obs_trajectory.trajectory_point().empty()) {
+   // added by Mais
+
+  const auto obstacle_sl = obstacle.PerceptionSLBoundary();
+  double obstacle_s = (obstacle_sl.start_s()+obstacle_sl.end_s())/2;
+    
+    if ((obs_trajectory.trajectory_point().empty()||   obstacle_s<66)&&(overtake_obstacle_id==obstacle.Id())) {
+ // if (obs_trajectory.trajectory_point().empty()) {
     // Processing a static obstacle.
     // Sanity checks.
     if (!obstacle.IsStatic()) {

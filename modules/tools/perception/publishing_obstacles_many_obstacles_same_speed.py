@@ -176,7 +176,7 @@ if __name__ == '__main__':
     old_x6= initial_x6
     old_y6= initial_y6
     
-    speed = 5 #3.8 #6  # m/s
+    speed = 4 #3.8 #6  # m/s
     T = 0.1   #in seconds/ sleep time
     delta_s = T * speed
     start_time = cyber_time.Time.now().to_sec()

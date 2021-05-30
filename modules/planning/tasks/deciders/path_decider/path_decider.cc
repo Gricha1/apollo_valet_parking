@@ -118,7 +118,8 @@ bool PathDecider::MakeStaticObstacleDecision(
       continue;
     }
     // - add STOP decision for blocking obstacles.
-    if (obstacle->Id() == blocking_obstacle_id &&
+    // condition added by Mais " obstacle->IsStatic() "
+    if (obstacle->IsStatic() && obstacle->Id() == blocking_obstacle_id &&
         !injector_->planning_context()
              ->planning_status()
              .path_decider()

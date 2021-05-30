@@ -5,6 +5,7 @@ stage_config: {
   enabled: true
   task_type: LANE_CHANGE_DECIDER
   task_type: PATH_REUSE_DECIDER
+  # task_type: BEHAVIOUR_TREE_DECIDER
   task_type: PATH_LANE_BORROW_DECIDER
   task_type: PATH_BOUNDS_DECIDER
   task_type: PIECEWISE_JERK_PATH_OPTIMIZER
@@ -14,11 +15,13 @@ stage_config: {
   task_type: ST_BOUNDS_DECIDER
   task_type: SPEED_BOUNDS_PRIORI_DECIDER
   task_type: SPEED_HEURISTIC_OPTIMIZER
+  #task_type: MIPT_SPEED_DECIDER
   task_type: SPEED_DECIDER
   task_type: SPEED_BOUNDS_FINAL_DECIDER
   # task_type: PIECEWISE_JERK_SPEED_OPTIMIZER
   task_type: PIECEWISE_JERK_NONLINEAR_SPEED_OPTIMIZER
   task_type: RSS_DECIDER
+
 
   task_config: {
     task_type: LANE_CHANGE_DECIDER

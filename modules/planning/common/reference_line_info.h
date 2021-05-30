@@ -245,8 +245,31 @@ class ReferenceLineInfo {
   void set_path_reusable(const bool path_reusable) {
     path_reusable_ = path_reusable;
   }
+  ////added by Mais
+  void set_Keep_lane(const bool Keep_lane) {
+    Keep_lane_ = Keep_lane;
+  }
+  
+  void set_Switch_to_left(const bool Switch_to_left) {
+    Switch_to_left_ = Switch_to_left;
+  }
+    
+  void set_Switch_to_right(const bool Switch_to_right) {
+    Switch_to_right_ = Switch_to_right;
+  }
+  //////
 
   bool path_reusable() const { return path_reusable_; }
+
+  /// added by Mais 
+  
+  bool Keep_lane() const { return Keep_lane_; }
+  
+  bool Switch_to_left() const { return Switch_to_left_; }
+  
+  bool Switch_to_right() const { return Switch_to_right_; }    
+  
+  /////
 
  private:
   void InitFirstOverlaps();
@@ -349,7 +372,12 @@ class ReferenceLineInfo {
   double cruise_speed_ = 0.0;
 
   bool path_reusable_ = false;
-
+  
+  /// added by Mais
+  bool Keep_lane_ = true;
+  bool Switch_to_left_ = true;
+  bool Switch_to_right_ = true;
+  /////
   DISALLOW_COPY_AND_ASSIGN(ReferenceLineInfo);
 };
 

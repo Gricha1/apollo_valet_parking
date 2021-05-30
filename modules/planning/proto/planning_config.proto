@@ -42,6 +42,9 @@ message TaskConfig {
     // other tasks
     LEARNING_MODEL_INFERENCE_TASK = 27;
     LEARNING_MODEL_INFERENCE_TRAJECTORY_TASK = 28;
+    // added by Mais
+  //  MIPT_SPEED_DECIDER = 29; 
+    //BEHAVIOUR_TREE_DECIDER = 30;
   };
 
   optional TaskType task_type = 1;

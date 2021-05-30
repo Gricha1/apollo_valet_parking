@@ -48,6 +48,9 @@
 #include "modules/planning/tasks/optimizers/piecewise_jerk_speed/piecewise_jerk_speed_optimizer.h"
 #include "modules/planning/tasks/task.h"
 
+//#include "modules/planning/tasks/deciders/mipt_speed_decider/mipt_speed_decider.h"
+//#include "modules/planning/tasks/deciders/behaviour_tree_decider/behaviour_tree_decider.h"
+
 namespace apollo {
 namespace planning {
 
@@ -68,6 +71,23 @@ std::unordered_map<TaskConfig::TaskType, TaskConfig, std::hash<int>>
 void TaskFactory::Init(const PlanningConfig& config,
                        const std::shared_ptr<DependencyInjector>& injector) {
   ///////////////////////////
+
+  // deciders added by Mais
+ // task_factory_.Register(
+ //     TaskConfig::BEHAVIOUR_TREE_DECIDER,
+ //     [](const TaskConfig& config,
+ //        const std::shared_ptr<DependencyInjector>& injector) -> Task* {
+ //       return new BehaviourTreeDecider(config, injector);
+ //     });
+  /*    
+    task_factory_.Register(
+      TaskConfig::MIPT_SPEED_DECIDER,
+      [](const TaskConfig& config,
+         const std::shared_ptr<DependencyInjector>& injector) -> Task* {
+        return new MiptSpeedDecider(config, injector);
+      });
+    */  
+
   // deciders
   task_factory_.Register(
       TaskConfig::CREEP_DECIDER,

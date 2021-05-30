@@ -1547,14 +1547,33 @@ std::vector<ObstacleEdge> PathBoundsDecider::SortObstaclesForSweepLine(
     // Decompose each obstacle's rectangle into two edges: one at
     // start_s; the other at end_s.
     const auto obstacle_sl = obstacle->PerceptionSLBoundary();
-    sorted_obstacles.emplace_back(
-        1, obstacle_sl.start_s() - FLAGS_obstacle_lon_start_buffer,
-        obstacle_sl.start_l() - FLAGS_obstacle_lat_buffer,
-        obstacle_sl.end_l() + FLAGS_obstacle_lat_buffer, obstacle->Id());
-    sorted_obstacles.emplace_back(
-        0, obstacle_sl.end_s() + FLAGS_obstacle_lon_end_buffer,
-        obstacle_sl.start_l() - FLAGS_obstacle_lat_buffer,
-        obstacle_sl.end_l() + FLAGS_obstacle_lat_buffer, obstacle->Id());
+
+    //by Mais
+    auto* mutable_path_decider_status = injector_->planning_context()
+                                          ->mutable_planning_status()
+                                          ->mutable_path_decider();
+    double t_approx =0;
+    AWARN << "able to use self lane counter: "<<mutable_path_decider_status->able_to_use_self_lane_counter();
+    if(!obstacle->IsStatic()){
+        sorted_obstacles.emplace_back(
+            1, obstacle_sl.start_s() - FLAGS_obstacle_lon_start_buffer,
+            obstacle_sl.start_l() - 1.1,
+            obstacle_sl.end_l() + 1.1, obstacle->Id());
+        sorted_obstacles.emplace_back(
+            0, obstacle_sl.end_s() + FLAGS_obstacle_lon_end_buffer + t_approx,
+            obstacle_sl.start_l() - 1.1,
+            obstacle_sl.end_l() + 1.1, obstacle->Id());
+    } else{
+        sorted_obstacles.emplace_back(
+            1, obstacle_sl.start_s() - FLAGS_obstacle_lon_start_buffer,
+            obstacle_sl.start_l() - FLAGS_obstacle_lat_buffer,
+            obstacle_sl.end_l() + FLAGS_obstacle_lat_buffer, obstacle->Id());
+        sorted_obstacles.emplace_back(
+            0, obstacle_sl.end_s() + FLAGS_obstacle_lon_end_buffer + t_approx,
+            obstacle_sl.start_l() - FLAGS_obstacle_lat_buffer,
+            obstacle_sl.end_l() + FLAGS_obstacle_lat_buffer, obstacle->Id());
+    }
+    //////
   }
 
   // Sort.

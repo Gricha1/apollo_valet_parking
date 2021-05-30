@@ -96,7 +96,16 @@ void STBoundsDecider::InitSTBoundsDecider(
   st_obstacles_processor_.Init(path_data.discretized_path().Length(),
                                st_bounds_config_.total_time(), path_data,
                                path_decision, injector_->history());
-  st_obstacles_processor_.MapObstaclesToSTBoundaries(path_decision);
+
+ //added by Mais
+  auto* mutable_path_decider_status = injector_->planning_context()
+                                          ->mutable_planning_status()
+                                          ->mutable_path_decider();
+
+  std::string overtake_obstacle_id = mutable_path_decider_status->front_static_obstacle_id();
+
+
+  st_obstacles_processor_.MapObstaclesToSTBoundaries(path_decision,overtake_obstacle_id);
   auto time2 = std::chrono::system_clock::now();
   std::chrono::duration<double> diff = time2 - time1;
   ADEBUG << "Time for ST Obstacles Processing = " << diff.count() * 1000

@@ -55,7 +55,7 @@ class STObstaclesProcessor {
 
   virtual ~STObstaclesProcessor() = default;
 
-  common::Status MapObstaclesToSTBoundaries(PathDecision* const path_decision);
+  common::Status MapObstaclesToSTBoundaries(PathDecision* const path_decision,std::string overtake_obstacle_id);
 
   std::unordered_map<std::string, STBoundary> GetAllSTBoundaries();
 
@@ -107,7 +107,7 @@ class STObstaclesProcessor {
                                  std::vector<STPoint>* const lower_points,
                                  std::vector<STPoint>* const upper_points,
                                  bool* const is_caution_obstacle,
-                                 double* const obs_caution_end_t);
+                                 double* const obs_caution_end_t,std::string overtake_obstacle_id);
 
   /** @brief Given ADC's path and an obstacle instance at a certain timestep,
    * get the upper and lower s that ADC might overlap with the obs instance.

@@ -500,7 +500,7 @@ bool SpeedDecider::CheckIsFollow(const Obstacle& obstacle,
   static constexpr double kFollowCutOffTime = 0.5;
   if (boundary.min_t() > kFollowCutOffTime ||
       boundary.max_t() < kFollowTimeEpsilon) {
-    return false;
+    return false;   // edited by Mais // it was false
   }
 
   // cross lane but be moving to different direction
