@@ -8,6 +8,31 @@ filegroup(
 )
 
 py_binary(
+    name = "publishing_obstacles_many_obstacles_same_speed",
+    srcs = ["publishing_obstacles_many_obstacles_same_speed.py"],
+    deps = [
+        "//cyber/python/cyber_py3:cyber",
+        "//cyber/python/cyber_py3:cyber_time",
+        "//modules/routing/proto:routing_py_pb2",
+        "//modules/perception/proto:perception_obstacle_py_pb2",
+    ],
+)
+
+
+
+py_binary(
+    name = "publishing_obstacles",
+    srcs = ["publishing_obstacles.py"],
+    deps = [
+        "//cyber/python/cyber_py3:cyber",
+        "//cyber/python/cyber_py3:cyber_time",
+        "//modules/routing/proto:routing_py_pb2",
+        "//modules/perception/proto:perception_obstacle_py_pb2",
+    ],
+)
+
+
+py_binary(
     name = "empty_prediction",
     srcs = ["empty_prediction.py"],
     deps = [
