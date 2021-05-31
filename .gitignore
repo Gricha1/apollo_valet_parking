@@ -54,6 +54,8 @@ third_party/can_card_library/esd_can/lib
 # Map data files
 modules/map/data/*
 !modules/map/data/highway/
+!modules/map/data/BUILD
+!modules/map/data/README.md
 
 # python proto
 *_pb2.py
