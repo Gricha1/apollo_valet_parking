@@ -18,7 +18,7 @@
  * @file
  **/
 
-#include "modules/planning/tasks/deciders/speed_decider/speed_decider.h"
+#include "modules/planning/tasks/deciders/mipt_speed_decider/mipt_speed_decider.h"
 
 #include <algorithm>
 #include <memory>
@@ -43,11 +43,11 @@ using apollo::common::math::Vec2d;
 using apollo::cyber::Clock;
 using apollo::perception::PerceptionObstacle;
 
-SpeedDecider::SpeedDecider(const TaskConfig& config,
+MiptSpeedDecider::MiptSpeedDecider(const TaskConfig& config,
                            const std::shared_ptr<DependencyInjector>& injector)
     : Task(config, injector) {}
 
-common::Status SpeedDecider::Execute(Frame* frame,
+common::Status MiptSpeedDecider::Execute(Frame* frame,
                                      ReferenceLineInfo* reference_line_info) {
   Task::Execute(frame, reference_line_info);
   init_point_ = frame_->PlanningStartPoint();
@@ -63,7 +63,7 @@ common::Status SpeedDecider::Execute(Frame* frame,
   return Status::OK();
 }
 
-SpeedDecider::STLocation SpeedDecider::GetSTLocation(
+MiptSpeedDecider::STLocation MiptSpeedDecider::GetSTLocation(
     const PathDecision* const path_decision, const SpeedData& speed_profile,
     const STBoundary& st_boundary) const {
   if (st_boundary.IsEmpty()) {
@@ -117,7 +117,7 @@ SpeedDecider::STLocation SpeedDecider::GetSTLocation(
   return st_location;
 }
 
-bool SpeedDecider::CheckKeepClearCrossable(
+bool MiptSpeedDecider::CheckKeepClearCrossable(
     const PathDecision* const path_decision, const SpeedData& speed_profile,
     const STBoundary& keep_clear_st_boundary) const {
   bool keep_clear_crossable = true;
@@ -145,7 +145,7 @@ bool SpeedDecider::CheckKeepClearCrossable(
   return keep_clear_crossable;
 }
 
-bool SpeedDecider::CheckKeepClearBlocked(
+bool MiptSpeedDecider::CheckKeepClearBlocked(
     const PathDecision* const path_decision,
     const Obstacle& keep_clear_obstacle) const {
   bool keep_clear_blocked = false;
@@ -170,7 +170,7 @@ bool SpeedDecider::CheckKeepClearBlocked(
   return keep_clear_blocked;
 }
 
-bool SpeedDecider::IsFollowTooClose(const Obstacle& obstacle) const {
+bool MiptSpeedDecider::IsFollowTooClose(const Obstacle& obstacle) const {
   if (!obstacle.IsBlockingObstacle()) {
     return false;
   }
@@ -199,7 +199,7 @@ bool SpeedDecider::IsFollowTooClose(const Obstacle& obstacle) const {
   return distance < distance_numerator / distance_denominator;
 }
 
-Status SpeedDecider::MakeObjectDecision(
+Status MiptSpeedDecider::MakeObjectDecision(
     const SpeedData& speed_profile, PathDecision* const path_decision) const {
   if (speed_profile.size() < 2) {
     const std::string msg = "dp_st_graph failed to get speed profile.";
@@ -323,7 +323,7 @@ Status SpeedDecider::MakeObjectDecision(
   return Status::OK();
 }
 
-void SpeedDecider::AppendIgnoreDecision(Obstacle* obstacle) const {
+void MiptSpeedDecider::AppendIgnoreDecision(Obstacle* obstacle) const {
   ObjectDecisionType ignore_decision;
   ignore_decision.mutable_ignore();
   if (!obstacle->HasLongitudinalDecision()) {
@@ -334,7 +334,7 @@ void SpeedDecider::AppendIgnoreDecision(Obstacle* obstacle) const {
   }
 }
 
-bool SpeedDecider::CreateStopDecision(const Obstacle& obstacle,
+bool MiptSpeedDecider::CreateStopDecision(const Obstacle& obstacle,
                                       ObjectDecisionType* const stop_decision,
                                       double stop_distance) const {
   const auto& boundary = obstacle.path_st_boundary();
@@ -375,7 +375,7 @@ bool SpeedDecider::CreateStopDecision(const Obstacle& obstacle,
   return true;
 }
 
-bool SpeedDecider::CreateFollowDecision(
+bool MiptSpeedDecider::CreateFollowDecision(
     const Obstacle& obstacle, ObjectDecisionType* const follow_decision) const {
   const double follow_speed = init_point_.v();
   const double follow_distance_s =
@@ -409,7 +409,7 @@ bool SpeedDecider::CreateFollowDecision(
   return true;
 }
 
-bool SpeedDecider::CreateYieldDecision(
+bool MiptSpeedDecider::CreateYieldDecision(
     const Obstacle& obstacle, ObjectDecisionType* const yield_decision) const {
   PerceptionObstacle::Type obstacle_type = obstacle.Perception().type();
   double yield_distance = StGapEstimator::EstimateProperYieldingGap();
@@ -443,7 +443,7 @@ bool SpeedDecider::CreateYieldDecision(
   return true;
 }
 
-bool SpeedDecider::CreateOvertakeDecision(
+bool MiptSpeedDecider::CreateOvertakeDecision(
     const Obstacle& obstacle,
     ObjectDecisionType* const overtake_decision) const {
   const auto& velocity = obstacle.Perception().velocity();
@@ -482,7 +482,7 @@ bool SpeedDecider::CreateOvertakeDecision(
   return true;
 }
 
-bool SpeedDecider::CheckIsFollow(const Obstacle& obstacle,
+bool MiptSpeedDecider::CheckIsFollow(const Obstacle& obstacle,
                                  const STBoundary& boundary) const {
   const double obstacle_l_distance =
       std::min(std::fabs(obstacle.PerceptionSLBoundary().start_l()),
@@ -500,7 +500,7 @@ bool SpeedDecider::CheckIsFollow(const Obstacle& obstacle,
   static constexpr double kFollowCutOffTime = 0.5;
   if (boundary.min_t() > kFollowCutOffTime ||
       boundary.max_t() < kFollowTimeEpsilon) {
-    return false; 
+    return true;   // edited by Mais // it was false
   }
 
   // cross lane but be moving to different direction
@@ -511,7 +511,7 @@ bool SpeedDecider::CheckIsFollow(const Obstacle& obstacle,
   return true;
 }
 
-bool SpeedDecider::CheckStopForPedestrian(const Obstacle& obstacle) const {
+bool MiptSpeedDecider::CheckStopForPedestrian(const Obstacle& obstacle) const {
   const auto& perception_obstacle = obstacle.Perception();
   if (perception_obstacle.type() != PerceptionObstacle::PEDESTRIAN) {
     return false;

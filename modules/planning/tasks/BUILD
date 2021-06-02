@@ -30,6 +30,8 @@ cc_library(
     deps = [
         ":task",
         "//modules/planning/proto:planning_config_cc_proto",
+        "//modules/planning/tasks/deciders/mipt_speed_decider",
+        "//modules/planning/tasks/deciders/behaviour_tree_decider",
         "//modules/planning/tasks/deciders/creep_decider",
         "//modules/planning/tasks/deciders/lane_change_decider",
         "//modules/planning/tasks/deciders/open_space_decider:open_space_fallback_decider",
