@@ -16,7 +16,15 @@
 # limitations under the License.
 ###############################################################################
 DOCKER_USER="${USER}"
-DEV_CONTAINER="apollo_dev_${USER}"
+INSTANCE_NUM=1   # enter the instance number of Apollo
+
+if [[ "$INSTANCE_NUM" == "1" ]]; then
+  USER_TAG=${USER}
+else
+  USER_TAG="${USER}_${INSTANCE_NUM}"
+fi
+
+DEV_CONTAINER="apollo_dev_${USER_TAG}"
 
 xhost +local:root 1>/dev/null 2>&1
 

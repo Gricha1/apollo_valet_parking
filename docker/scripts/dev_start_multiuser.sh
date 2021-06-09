@@ -21,7 +21,14 @@ source "${CURR_DIR}/docker_base.sh"
 CACHE_ROOT_DIR="${APOLLO_ROOT_DIR}/.cache"
 
 DOCKER_REPO="apolloauto/apollo"
-DEV_CONTAINER="apollo_dev_${USER}"
+INSTANCE_NUM=1   # enter the instance number of Apollo
+
+if [[ "$INSTANCE_NUM" == "1" ]]; then
+  USER_TAG=${USER}
+else
+  USER_TAG="${USER}_${INSTANCE_NUM}"
+fi
+DEV_CONTAINER="apollo_dev_${USER_TAG}"
 DEV_INSIDE="in-dev-docker"
 
 SUPPORTED_ARCHS=(x86_64 aarch64)
@@ -45,10 +52,10 @@ MAP_VOLUMES_CONF=
 OTHER_VOLUMES_CONF=
 
 DREAMVIEW_PORT=8888
-HOST_DREAMVIEW_PORT=$((DREAMVIEW_PORT + ($UID - 1000)))
+HOST_DREAMVIEW_PORT=$((DREAMVIEW_PORT + ($UID - 1000+ ${INSTANCE_NUM}-1)))
 
 BRIDGE_PORT=9090
-HOST_BRIDGE_PORT=$((BRIDGE_PORT + ($UID - 1000)))
+HOST_BRIDGE_PORT=$((BRIDGE_PORT + ($UID - 1000+ ${INSTANCE_NUM}-1)))
 
 HOST_IP="$(hostname -I | cut -f1 -d" ")"
 
@@ -139,7 +146,7 @@ function parse_arguments() {
                 USER_AGREED="yes"
                 ;;
             stop)
-                info "Now, stop all Apollo containers created by ${USER} ..."
+                info "Now, stop all Apollo containers created by ${USER_TAG} ..."
                 stop_all_apollo_containers "-f"
                 exit 0
                 ;;
@@ -257,7 +264,7 @@ function docker_restart_volume() {
 function restart_map_volume_if_needed() {
     local map_name="$1"
     local map_version="$2"
-    local map_volume="apollo_map_volume-${map_name}_${USER}"
+    local map_volume="apollo_map_volume-${map_name}_${USER_TAG}"
     local map_path="/apollo/modules/map/data/${map_name}"
 
     if [[ ${MAP_VOLUMES_CONF} == *"${map_volume}"* ]]; then
@@ -300,21 +307,21 @@ function mount_other_volumes() {
     local volume_conf=
 
     # AUDIO
-    local audio_volume="apollo_audio_volume_${USER}"
+    local audio_volume="apollo_audio_volume_${USER_TAG}"
     local audio_image="${DOCKER_REPO}:data_volume-audio_model-${TARGET_ARCH}-latest"
     local audio_path="/apollo/modules/audio/data/"
     docker_restart_volume "${audio_volume}" "${audio_image}" "${audio_path}"
     volume_conf="${volume_conf} --volume ${audio_volume}:${audio_path}"
 
     # YOLOV4
-    local yolov4_volume="apollo_yolov4_volume_${USER}"
+    local yolov4_volume="apollo_yolov4_volume_${USER_TAG}"
     local yolov4_image="${DOCKER_REPO}:yolov4_volume-emergency_detection_model-${TARGET_ARCH}-latest"
     local yolov4_path="/apollo/modules/perception/camera/lib/obstacle/detector/yolov4/model/"
     docker_restart_volume "${yolov4_volume}" "${yolov4_image}" "${yolov4_path}"
     volume_conf="${volume_conf} --volume ${yolov4_volume}:${yolov4_path}"
 
     # FASTER_RCNN
-    local faster_rcnn_volume="apollo_faster_rcnn_volume_${USER}"
+    local faster_rcnn_volume="apollo_faster_rcnn_volume_${USER_TAG}"
     local faster_rcnn_image="${DOCKER_REPO}:faster_rcnn_volume-traffic_light_detection_model-${TARGET_ARCH}-latest"
     local faster_rcnn_path="/apollo/modules/perception/production/data/perception/camera/models/traffic_light_detection/faster_rcnn_model"
     docker_restart_volume "${faster_rcnn_volume}" "${faster_rcnn_image}" "${faster_rcnn_path}"
@@ -322,7 +329,7 @@ function mount_other_volumes() {
 
     # SMOKE
     if [[ "${TARGET_ARCH}" == "x86_64" ]]; then
-        local smoke_volume="apollo_smoke_volume_${USER}"
+        local smoke_volume="apollo_smoke_volume_${USER_TAG}"
         local smoke_image="${DOCKER_REPO}:smoke_volume-yolo_obstacle_detection_model-${TARGET_ARCH}-latest"
         local smoke_path="/apollo/modules/perception/production/data/perception/camera/models/yolo_obstacle_detector/smoke_libtorch_model"
         docker_restart_volume "${smoke_volume}" "${smoke_image}" "${smoke_path}"
