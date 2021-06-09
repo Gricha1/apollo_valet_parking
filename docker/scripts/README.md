@@ -32,8 +32,10 @@ local faster_rcnn_volume="apollo_faster_rcnn_volume_${USER}"
 
 local smoke_volume="apollo_smoke_volume_${USER}"
 -->  local smoke_volume="apollo_smoke_volume_${USER}2"
+```
+* change the container name in  ./docker/scripts/dev_into_multiuser.sh
 
-change the container name in  ./docker/scripts/dev_into_multiuser.sh
+```txt
 DEV_CONTAINER="apollo_dev_${USER}"
 -->  DEV_CONTAINER="apollo_dev_${USER}2"
 
