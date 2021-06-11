@@ -60,6 +60,16 @@ bool IsNonmovableObstacle(const ReferenceLineInfo& reference_line_info,
     if (other_obstacle->IsVirtual()) {
       continue;
     }
+
+
+    //added by Mais
+    double distance =other_obstacle->PerceptionSLBoundary().start_s() -
+                     obstacle.PerceptionSLBoundary().start_s();
+    if (other_obstacle->speed()>obstacle.speed()&&distance < 25){
+      return false;
+    }
+    ///////
+
     if (other_obstacle->PerceptionSLBoundary().start_l() >
             obstacle.PerceptionSLBoundary().end_l() ||
         other_obstacle->PerceptionSLBoundary().end_l() <

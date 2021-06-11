@@ -5,8 +5,8 @@ TOP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "${TOP_DIR}/scripts/apollo_base.sh"
 
 #${TOP_DIR}/bazel-bin/modules/tools/perception/publishing_obstacles "$@"
-${TOP_DIR}/bazel-bin/modules/tools/perception/publishing_obstacles_many_obstacles_same_speed "$@"
-
+#${TOP_DIR}/bazel-bin/modules/tools/perception/publishing_obstacles_many_obstacles_same_speed "$@"
+${TOP_DIR}/bazel-bin/modules/tools/added_scripts/publishing_obstacles-test-scene "$@"
 
 
 

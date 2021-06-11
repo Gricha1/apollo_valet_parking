@@ -1,0 +1,23 @@
+landmark {
+    name: "Route: 250 parking space 11544",
+    parking_info {
+        parking_space_id: "11544",
+        parking_point {
+            x: 388038.94
+            y: 221157.11
+        }
+    },
+    waypoint {
+      pose {
+        x: 388051.44
+        y: 221152.32
+      }
+    }
+    waypoint {
+      pose {
+        x: 388024.90
+        y: 221152.27
+      }
+    }
+}
+

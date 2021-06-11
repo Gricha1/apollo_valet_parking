@@ -255,6 +255,14 @@ void HMIWorker::InitStatus() {
   for (const auto& vehicle : config_.vehicles()) {
     status_.add_vehicles(vehicle.first);
   }
+  //added by Mais to choose the vehicle, the map and the mode automaticaly
+  ChangeVehicle("Lincoln2017MKZ LGSVL");
+  ChangeMode("Mkz Lgsvl");
+  ChangeMap("Test Scene");
+  //ChangeMap("Highway");
+//  ChangeMap("Shalun"); //"NKB Cutted"
+  // "San Mateo" "Borregas Ave" "San Francisco" "Straight Line"  "Sunnyvale Big Loop" "Demo" "NKB" "Sunnyvale Loop" "NKB Cutted"  "Highway" Autonomous Stuff" "Sunnyvale With Two Offices" "Shalun"
+
 
   // Initial HMIMode by priority:
   //   1. NavigationMode if --use_navigation_mode is specified explicitly.
