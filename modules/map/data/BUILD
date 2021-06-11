@@ -15,3 +15,19 @@ filegroup(
         "sunnyvale_loop/**",
     ]),
 )
+
+
+filegroup(
+    name = "highway",
+    srcs = glob([
+        "highway/**",
+    ])
+)
+
+
+filegroup(
+    name = "test_scene",
+    srcs = glob([
+        "test_scene/**",
+    ])
+)
