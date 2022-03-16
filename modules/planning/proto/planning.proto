@@ -40,6 +40,22 @@ message RSSInfo {
   optional double acc_lat_right_range_maximum = 9;
 }
 
+message roi_point {
+  optional double x = 1;
+  optional double y = 2;
+  optional double phi = 3;
+  optional double v = 4;
+  optional double a = 5;
+  optional double steer = 6;
+  optional double accumulated_s = 7;
+}
+
+message roi_boundary_message {
+  optional uint64 timestamp = 1;
+  repeated roi_point point = 2;
+}
+
+
 // next id: 24
 message ADCTrajectory {
   optional apollo.common.Header header = 1;

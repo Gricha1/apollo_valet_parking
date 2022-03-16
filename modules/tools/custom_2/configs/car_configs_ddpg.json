@@ -1,0 +1,12 @@
+{
+    "length": 3.8,
+    "width": 2,
+    "wheel_base": 2.5,
+    "safe_eps": 0.001,
+    "max_steer": 45,
+    "max_vel": 10,
+    "min_vel": -5,
+    "max_acc": 5,
+    "max_ang_vel": 15,
+    "delta_t": 0.1
+}

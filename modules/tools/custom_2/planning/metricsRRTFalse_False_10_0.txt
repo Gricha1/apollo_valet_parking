@@ -1,0 +1,4 @@
+succes rate: 0.0
+samples: 1500.0
+successed samples: 940.0
+average time: 0

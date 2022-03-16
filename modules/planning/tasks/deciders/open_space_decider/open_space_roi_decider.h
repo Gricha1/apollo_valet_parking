@@ -74,6 +74,19 @@ class OpenSpaceRoiDecider : public Decider {
   void SetPullOverSpotEndPose(Frame *const frame);
   void SetParkAndGoEndPose(Frame *const frame);
 
+  /*
+    custom changes:
+  */
+  //------------------------------------------------
+  void GetBoundaryPoints(
+  const std::vector<std::vector<common::math::Vec2d>> &roi_parking_boundary,
+    Frame *const frame, std::vector<common::math::Vec2d>& all_boundary_points);
+
+  void LoadBoundaryPoints(
+    Frame *const frame, std::vector<common::math::Vec2d> &all_boundary_points);
+
+  //------------------------------------------------
+
   // @brief Get road boundaries of both sides
   void GetRoadBoundary(
       const hdmap::Path &nearby_path, const double center_line_s,
@@ -138,6 +151,8 @@ class OpenSpaceRoiDecider : public Decider {
   bool GetParkAndGoBoundary(Frame *const frame, const hdmap::Path &nearby_path,
                             std::vector<std::vector<common::math::Vec2d>>
                                 *const roi_parking_boundary);
+
+
 
   // @brief search target parking spot on the path by vehicle location, if
   // no return a nullptr in target_parking_spot

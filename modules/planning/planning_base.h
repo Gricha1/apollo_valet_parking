@@ -46,6 +46,7 @@
  */
 namespace apollo {
 namespace planning {
+
 /**
  * @class planning
  *
@@ -63,8 +64,21 @@ class PlanningBase {
 
   virtual std::string Name() const = 0;
 
+  /*
+    custom changes:
+  */
+  //-------------------------------------------------------
+  //virtual void RunOnce(const LocalView& local_view,
+  //                     ADCTrajectory* const adc_trajectory) = 0;
+
   virtual void RunOnce(const LocalView& local_view,
-                       ADCTrajectory* const adc_trajectory) = 0;
+                                           ADCTrajectory* const adc_trajectory,
+                  std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+    std::shared_ptr<cyber::Writer<roi_boundary_message>>* roi_boundary_writer_,
+                                                          bool flag_trajectory,
+                            std::vector<std::pair<double, double>>* trajectory,
+                            std::vector<point_info>* polamp_trajectory_info) = 0;
+  //-------------------------------------------------------
 
   /**
    * @brief Plan the trajectory given current vehicle state

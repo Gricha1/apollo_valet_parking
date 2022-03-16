@@ -38,13 +38,20 @@ using apollo::routing::RoutingRequest;
 using apollo::routing::RoutingResponse;
 using apollo::storytelling::Stories;
 
+
+bool PlanningComponent::flag_trajectory = false;
+std::vector<std::pair<double, double>> PlanningComponent::trajectory = {};
+std::vector<point_info> polamp_trajectory_info = {};
+
 bool PlanningComponent::Init() {
   injector_ = std::make_shared<DependencyInjector>();
 
   if (FLAGS_use_navigation_mode) {
     planning_base_ = std::make_unique<NaviPlanning>(injector_);
+    AWARN << "NAVI";
   } else {
     planning_base_ = std::make_unique<OnLanePlanning>(injector_);
+    AWARN << "ONLANE";
   }
 
   ACHECK(ComponentBase::GetProtoConfig(&config_))
@@ -94,6 +101,12 @@ bool PlanningComponent::Init() {
         stories_.CopyFrom(*stories);
       });
 
+
+  //custom changes
+  trajectory_reader_ = node_->CreateReader<roi_boundary_message>(
+      "from_python_to_apollo", MessageCallback);
+
+
   if (FLAGS_use_navigation_mode) {
     relative_map_reader_ = node_->CreateReader<MapMsg>(
         config_.topic_config().relative_map_topic(),
@@ -106,6 +119,16 @@ bool PlanningComponent::Init() {
   planning_writer_ = node_->CreateWriter<ADCTrajectory>(
       config_.topic_config().planning_trajectory_topic());
 
+  /*
+    custom changes: take boundaries from roi decider
+  */
+  //-------------------------------------------------
+  //roi_boundary_writer_ = node_->CreateWriter<ADCTrajectory>(
+  //    config_.topic_config().get_roi_boundaries_topic());
+  roi_boundary_writer_ = node_->CreateWriter<roi_boundary_message>(
+      "get_roi_boundaries_topic");
+  //-------------------------------------------------
+
   rerouting_writer_ = node_->CreateWriter<RoutingRequest>(
       config_.topic_config().routing_request_topic());
 
@@ -113,6 +136,39 @@ bool PlanningComponent::Init() {
       config_.topic_config().planning_learning_data_topic());
 
   return true;
+}
+
+void PlanningComponent::MessageCallback(
+    const std::shared_ptr<roi_boundary_message>& msg) {
+
+  AWARN << "new using message start: " << flag_trajectory;
+  AWARN << "count of points: " << msg->point_size() << std::endl;
+  for (int i = 0; i < msg->point_size(); i++) {
+    trajectory.push_back(std::make_pair<double,double> 
+                (msg->point(i).x(), msg->point(i).y()));
+    //update info of polamp trajectory
+    point_info temp_point;
+    temp_point.x = msg->point(i).x();
+    temp_point.y = msg->point(i).y();
+    temp_point.phi = msg->point(i).phi();
+    temp_point.v = msg->point(i).v();
+    temp_point.a = msg->point(i).a();
+    temp_point.steer = msg->point(i).steer();
+    polamp_trajectory_info.push_back(temp_point);
+  }
+
+  /*
+  //DEBUG
+  AWARN << "new polap info: " << std::endl;
+  for (auto &it : polamp_trajectory_info) {
+    //AWARN << trajectory[i].first << " " << trajectory[i].second << std::endl;
+    AWARN << it.x << " " << it.y << " " << it.v << " " << it.a  
+          << std::endl;
+  }
+  */
+
+  flag_trajectory = true;
+  AWARN << "new using message end: " << flag_trajectory;
 }
 
 bool PlanningComponent::Proc(
@@ -186,7 +242,20 @@ bool PlanningComponent::Proc(
   }
 
   ADCTrajectory adc_trajectory_pb;
-  planning_base_->RunOnce(local_view_, &adc_trajectory_pb);
+
+
+  //custom changes: take boundaries from roi decider
+  auto roi_boundaries_pb = std::make_shared<roi_boundary_message>();
+
+
+  planning_base_->RunOnce(local_view_, &adc_trajectory_pb, 
+                &roi_boundaries_pb,
+                &roi_boundary_writer_,
+                flag_trajectory,
+                &trajectory,
+                &polamp_trajectory_info);
+
+
   common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
 
   // modify trajectory relative time due to the timestamp change in header
@@ -195,6 +264,7 @@ bool PlanningComponent::Proc(
   for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
     p.set_relative_time(p.relative_time() + dt);
   }
+
   planning_writer_->Write(adc_trajectory_pb);
 
   // record in history

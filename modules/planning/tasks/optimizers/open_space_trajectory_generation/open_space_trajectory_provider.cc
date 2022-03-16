@@ -88,6 +88,22 @@ Status OpenSpaceTrajectoryProvider::Process() {
   auto trajectory_data =
       frame_->mutable_open_space_info()->mutable_stitched_trajectory_result();
 
+
+  //custom change
+  /*
+  AWARN << "provider trajectory size: " 
+        << frame_->polamp_trajectory.size() 
+        << std::endl; //DEBUG
+
+  for (auto &it : frame_->polamp_trajectory) {
+      AWARN << double(it.first) << " " 
+            << double(it.second) << std::endl;  //DEBUG
+  }
+  AWARN << "---------------------";
+  */
+  
+
+
   // generate stop trajectory at park_and_go check_stage
   if (injector_->planning_context()
           ->mutable_planning_status()
@@ -171,6 +187,8 @@ Status OpenSpaceTrajectoryProvider::Process() {
       return Status(ErrorCode::OK, "Vehicle is near to destination");
     }
 
+    //AWARN << "debug traj_updated: "
+    //      << trajectory_updated_;
     // Check if trajectory updated
     if (trajectory_updated_) {
       std::lock_guard<std::mutex> lock(open_space_mutex_);
@@ -186,6 +204,10 @@ Status OpenSpaceTrajectoryProvider::Process() {
       }
       data_ready_.store(false);
       trajectory_updated_.store(false);
+
+      AWARN << "debug ok traj"
+            << std::endl;
+
       return Status::OK();
     }
 
@@ -213,7 +235,8 @@ Status OpenSpaceTrajectoryProvider::Process() {
       return Status(ErrorCode::OK,
                     "Waiting for open_space_trajectory_optimizer in "
                     "open_space_trajectory_provider");
-    } else {
+    } 
+    else {
       GenerateStopTrajectory(trajectory_data);
       return Status(ErrorCode::OK, "Stop due to computation not finished");
     }
@@ -236,15 +259,20 @@ Status OpenSpaceTrajectoryProvider::Process() {
     }
 
     // Generate Trajectory;
+    //custom changes adding frame_
     double time_latency;
     Status status = open_space_trajectory_optimizer_->Plan(
         stitching_trajectory, end_pose, XYbounds, rotate_angle,
         translate_origin, obstacles_edges_num, obstacles_A, obstacles_b,
-        obstacles_vertices_vec, &time_latency);
+        obstacles_vertices_vec, &time_latency, frame_);
     frame_->mutable_open_space_info()->set_time_latency(time_latency);
+
+
 
     // If status is OK, update vehicle trajectory;
     if (status == Status::OK()) {
+      AWARN << "debug status OK"
+            << std::endl;
       LoadResult(trajectory_data);
       return status;
     } else {
@@ -263,14 +291,22 @@ void OpenSpaceTrajectoryProvider::GenerateTrajectoryThread() {
         thread_data = thread_data_;
       }
       double time_latency;
+      //AERROR << "PLAN IS USING";
       Status status = open_space_trajectory_optimizer_->Plan(
           thread_data.stitching_trajectory, thread_data.end_pose,
           thread_data.XYbounds, thread_data.rotate_angle,
           thread_data.translate_origin, thread_data.obstacles_edges_num,
           thread_data.obstacles_A, thread_data.obstacles_b,
-          thread_data.obstacles_vertices_vec, &time_latency);
+          thread_data.obstacles_vertices_vec, &time_latency, frame_);
+      
+
+
       frame_->mutable_open_space_info()->set_time_latency(time_latency);
       if (status == Status::OK()) {
+        //DEBUG
+        AWARN << "status true for update"
+              << std::endl;
+
         std::lock_guard<std::mutex> lock(open_space_mutex_);
         trajectory_updated_.store(true);
       } else {
@@ -351,9 +387,14 @@ bool OpenSpaceTrajectoryProvider::IsVehicleStopDueToFallBack(
 
 void OpenSpaceTrajectoryProvider::GenerateStopTrajectory(
     DiscretizedTrajectory* const trajectory_data) {
+  //AERROR << "GENERATE STOP TRAJECTORY";
   double relative_time = 0.0;
   // TODO(Jinyun) Move to conf
+  //--------------------------------ДОБАВЛЕНИЕ--------------------------------
+  //static constexpr int stop_trajectory_length = 10;
   static constexpr int stop_trajectory_length = 10;
+  
+  //------------------------------------------------------------------------
   static constexpr double relative_stop_time = 0.1;
   static constexpr double vEpsilon = 0.00001;
   double standstill_acceleration =

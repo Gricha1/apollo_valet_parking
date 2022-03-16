@@ -46,6 +46,7 @@ using apollo::common::TrajectoryPoint;
 using apollo::common::VehicleState;
 using apollo::common::VehicleStateProvider;
 using apollo::cyber::Clock;
+using apollo::cyber::Time;
 using apollo::hdmap::HDMapUtil;
 
 NaviPlanning::~NaviPlanning() {
@@ -117,8 +118,22 @@ Status NaviPlanning::InitFrame(const uint32_t sequence_num,
   return Status::OK();
 }
 
+/*
+  custom change: adding for getting roi boundaries
+*/
+//------------------------------------------------------
+//void NaviPlanning::RunOnce(const LocalView& local_view,
+//                           ADCTrajectory* const trajectory_pb) {
 void NaviPlanning::RunOnce(const LocalView& local_view,
-                           ADCTrajectory* const trajectory_pb) {
+                                          ADCTrajectory* const trajectory_pb, 
+                std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+  std::shared_ptr<cyber::Writer<roi_boundary_message>>* roi_boundary_writer_,
+                                                        bool flag_trajectory,
+                            std::vector<std::pair<double, double>>* trajectory,
+                            std::vector<point_info>* polamp_trajectory_info) {
+
+  AWARN << "RUN ONCE navi: " << std::endl;
+//------------------------------------------------------
   local_view_ = local_view;
   const double start_timestamp = Clock::NowInSeconds();
 
@@ -249,6 +264,20 @@ void NaviPlanning::RunOnce(const LocalView& local_view,
     auto seq_num = frame_->SequenceNum();
     injector_->frame_history()->Add(seq_num, std::move(frame_));
 
+    /*
+    custom changes: get roi boundaries
+    */
+    //------------------------------------------------
+    AWARN << "boundary points on lane: " << std::endl;
+    for (auto it = frame_->roi_boundary_points.begin(); it != frame_->roi_boundary_points.end(); it++){
+      AWARN << "(" << (*it).x() << "," << (*it).y() << ")" << std::endl;
+    }
+    AWARN << frame_->roi_boundary_points.size() << std::endl;
+
+    //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
+
+    //------------------------------------------------
+
     return;
   }
 
@@ -307,6 +336,9 @@ void NaviPlanning::RunOnce(const LocalView& local_view,
   trajectory_pb->set_gear(canbus::Chassis::GEAR_DRIVE);
   FillPlanningPb(start_timestamp, trajectory_pb);
   ADEBUG << "Planning pb:" << trajectory_pb->header().DebugString();
+
+
+
 
   auto seq_num = frame_->SequenceNum();
   injector_->frame_history()->Add(seq_num, std::move(frame_));
@@ -451,6 +483,23 @@ void NaviPlanning::GetRightNeighborLanesInfo(
               return left.second > right.second;
             });
 }
+
+/*
+  custom changes:
+*/
+//------------------------------------------------------------------------
+void NaviPlanning::GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+                    std::unique_ptr<apollo::planning::Frame>* frame_) {
+  for (auto it = (*frame_)->roi_boundary_points.begin(); 
+       it != (*frame_)->roi_boundary_points.end(); it++) {
+         auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
+         roi_point->set_x((*it).x());
+         roi_point->set_y((*it).y());
+         (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
+       }
+}
+
+//------------------------------------------------------------------------
 
 void NaviPlanning::ExportReferenceLineDebug(planning_internal::Debug* debug) {
   if (!FLAGS_enable_record_debug) {

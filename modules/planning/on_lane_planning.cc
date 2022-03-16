@@ -20,6 +20,9 @@
 #include <limits>
 #include <list>
 #include <utility>
+//custom changes added two libs
+#include <chrono>
+#include <thread>
 
 #include "absl/strings/str_cat.h"
 #include "cyber/common/file.h"
@@ -44,6 +47,8 @@
 #include "modules/planning/traffic_rules/traffic_decider.h"
 #include "modules/routing/proto/routing.pb.h"
 
+
+
 namespace apollo {
 namespace planning {
 using apollo::canbus::Chassis;
@@ -55,6 +60,7 @@ using apollo::common::VehicleState;
 using apollo::common::VehicleStateProvider;
 using apollo::common::math::Vec2d;
 using apollo::cyber::Clock;
+using apollo::cyber::Time;
 using apollo::dreamview::Chart;
 using apollo::hdmap::HDMapUtil;
 using apollo::planning_internal::SLFrameDebug;
@@ -179,6 +185,60 @@ Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
   return Status::OK();
 }
 
+
+
+/*
+  custom changes:
+*/
+//------------------------------------------------------------------------
+void OnLanePlanning::GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+                    std::unique_ptr<apollo::planning::Frame>* frame_) {
+
+  for (auto it = (*frame_)->roi_boundary_points.begin(); 
+       it != (*frame_)->roi_boundary_points.end(); it++) {
+         auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
+         roi_point->set_x((*it).x());
+         roi_point->set_y((*it).y());
+         (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
+       }
+}
+
+  
+  //void OnLanePlanning::GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb) {
+  /*
+  ptr_roi_boundaries_pb->clear_trajectory_point();
+
+  TrajectoryPoint tp;
+ 
+  for (auto it = frame_->roi_boundary_points.begin(); 
+       it != frame_->roi_boundary_points.end(); it++) {
+    //tp.set_relative_time(t);
+    auto next_point = ptr_roi_boundaries_pb->add_trajectory_point();
+
+    auto* path_point = tp.mutable_path_point();
+    path_point->set_x((*it).x());
+    path_point->set_y((*it).y());
+    path_point->set_theta(0);
+    path_point->set_s(0.0);
+    tp.set_v(0.0);
+    tp.set_a(0.0);
+
+    next_point->CopyFrom(tp);
+  }
+  
+
+  for (auto it = frame_->roi_boundary_points.begin(); 
+       it != frame_->roi_boundary_points.end(); it++) {
+         auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
+         roi_point->set_x((*it).x());
+         roi_point->set_y((*it).y());
+         (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
+       }
+  }
+  */
+//------------------------------------------------------------------------
+
+
 // TODO(all): fix this! this will cause unexpected behavior from controller
 void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
   ptr_trajectory_pb->clear_trajectory_point();
@@ -202,10 +262,25 @@ void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
   }
 }
 
+
+//void OnLanePlanning::RunOnce(const LocalView& local_view,
+//                             ADCTrajectory* const ptr_trajectory_pb) {
+
+
+
+//custom changes
 void OnLanePlanning::RunOnce(const LocalView& local_view,
-                             ADCTrajectory* const ptr_trajectory_pb) {
+                             ADCTrajectory* const ptr_trajectory_pb,
+              std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+  std::shared_ptr<cyber::Writer<roi_boundary_message>>* roi_boundary_writer_,
+                                                        bool flag_trajectory,
+                        std::vector< std::pair<double, double> >* trajectory,
+                        std::vector<point_info>* polamp_trajectory_info) {
+                  
+  
   // when rerouting, reference line might not be updated. In this case, planning
   // module maintains not-ready until be restarted.
+
   static bool failed_to_update_reference_line = false;
   local_view_ = local_view;
   const double start_timestamp = Clock::NowInSeconds();
@@ -244,8 +319,14 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     ptr_trajectory_pb->set_gear(canbus::Chassis::GEAR_DRIVE);
     FillPlanningPb(start_timestamp, ptr_trajectory_pb);
     GenerateStopTrajectory(ptr_trajectory_pb);
+
     return;
   }
+
+  //custom changes
+  //int sss = frame_->roi_boundary_points.size();
+
+
 
   if (start_timestamp - vehicle_state_timestamp <
       FLAGS_message_latency_threshold) {
@@ -296,7 +377,24 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
 
   injector_->ego_info()->Update(stitching_trajectory.back(), vehicle_state);
   const uint32_t frame_num = static_cast<uint32_t>(seq_num_++);
+
   status = InitFrame(frame_num, stitching_trajectory.back(), vehicle_state);
+
+  //custom changes (getting roi boundaries and sending to the topic)
+  int sss = frame_->roi_boundary_points.size();
+
+  //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
+  
+  //(*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
+
+  //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+  //custom changes (getting trajectory)
+
+
+
+
+
+
 
   if (status.ok()) {
     injector_->ego_info()->CalculateFrontObstacleClearDistance(
@@ -329,6 +427,8 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
       status.Save(ptr_trajectory_pb->mutable_header()->mutable_status());
       GenerateStopTrajectory(ptr_trajectory_pb);
     }
+
+
     // TODO(all): integrate reverse gear
     ptr_trajectory_pb->set_gear(canbus::Chassis::GEAR_DRIVE);
     FillPlanningPb(start_timestamp, ptr_trajectory_pb);
@@ -337,6 +437,8 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     injector_->frame_history()->Add(n, std::move(frame_));
     return;
   }
+
+  //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
 
   for (auto& ref_line_info : *frame_->mutable_reference_line_info()) {
     TrafficDecider traffic_decider;
@@ -350,10 +452,36 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
     }
   }
 
+
+  //custom changes
+  frame_->polamp_trajectory = {};
+  frame_->polamp_ready = flag_trajectory;
+  if (frame_->polamp_ready) {
+    for (auto it = (*trajectory).begin(); it != (*trajectory).end(); it++) {
+      frame_->polamp_trajectory.push_back(std::make_pair(it->first,
+                                                          it->second));
+    }
+
+    for (auto &it : *polamp_trajectory_info) {
+      point_info temp_point;
+      temp_point.x = it.x;
+      temp_point.y = it.y;
+      temp_point.phi = it.phi;
+      temp_point.v = it.v;
+      temp_point.a = it.a;
+      temp_point.steer = it.steer;  
+      frame_->polamp_trajectory_info.push_back(temp_point);
+    }
+  }
+  
+
   status = Plan(start_timestamp, stitching_trajectory, ptr_trajectory_pb);
+  GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
+ 
 
   for (const auto& p : ptr_trajectory_pb->trajectory_point()) {
-    ADEBUG << p.DebugString();
+    //CUSTOM
+    AWARN << p.DebugString();
   }
   const auto end_system_timestamp =
       std::chrono::duration<double>(
@@ -407,6 +535,14 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
                                 ptr_trajectory_pb);
     }
   }
+
+  //custom changes
+  //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
+  
+  (*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
+
+  //custom changes
+  AWARN << sss << std::endl;
 
   const uint32_t n = frame_->SequenceNum();
   injector_->frame_history()->Add(n, std::move(frame_));

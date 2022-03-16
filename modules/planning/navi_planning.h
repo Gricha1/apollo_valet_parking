@@ -63,8 +63,33 @@ class NaviPlanning : public PlanningBase {
    * @brief main logic of the planning module, runs periodically triggered by
    * timer.
    */
+
+  /*
+    custom changes:
+  */
+  //-------------------------------------------------------
+  //void RunOnce(const LocalView& local_view,
+  //             ADCTrajectory* const ptr_trajectory_pb) override;
+  
   void RunOnce(const LocalView& local_view,
-               ADCTrajectory* const trajectory_pb) override;
+                                        ADCTrajectory* const ptr_trajectory_pb,
+                  std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+    std::shared_ptr<cyber::Writer<roi_boundary_message>>* roi_boundary_writer_,
+                                                          bool flag_trajectory,
+                      std::vector< std::pair<double, double> >* trajectory,
+                      std::vector<point_info>* polamp_trajectory_info) override;
+
+  //-------------------------------------------------------
+
+  /*
+    custom changes: 
+  */
+  //------------------------------------------------
+  void GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+                      std::unique_ptr<apollo::planning::Frame>* frame_);
+
+  //------------------------------------------------
+
 
   apollo::common::Status Plan(
       const double current_time_stamp,

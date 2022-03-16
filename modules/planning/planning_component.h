@@ -47,6 +47,13 @@ class PlanningComponent final
   ~PlanningComponent() = default;
 
  public:
+
+  static std::vector<std::pair<double, double>> trajectory;
+  static bool flag_trajectory;
+ 
+  static void MessageCallback(
+    const std::shared_ptr<roi_boundary_message>& msg);
+
   bool Init() override;
 
   bool Proc(const std::shared_ptr<prediction::PredictionObstacles>&
@@ -60,6 +67,7 @@ class PlanningComponent final
   bool CheckInput();
 
  private:
+
   std::shared_ptr<cyber::Reader<perception::TrafficLightDetection>>
       traffic_light_reader_;
   std::shared_ptr<cyber::Reader<routing::RoutingResponse>> routing_reader_;
@@ -68,6 +76,14 @@ class PlanningComponent final
   std::shared_ptr<cyber::Reader<storytelling::Stories>> story_telling_reader_;
 
   std::shared_ptr<cyber::Writer<ADCTrajectory>> planning_writer_;
+  
+
+  //custom changes:
+  std::shared_ptr<cyber::Reader<roi_boundary_message>> trajectory_reader_;
+  std::shared_ptr<cyber::Writer<roi_boundary_message>> roi_boundary_writer_;
+  
+  
+
   std::shared_ptr<cyber::Writer<routing::RoutingRequest>> rerouting_writer_;
   std::shared_ptr<cyber::Writer<PlanningLearningData>>
       planning_learning_data_writer_;

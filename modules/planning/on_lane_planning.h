@@ -60,8 +60,19 @@ class OnLanePlanning : public PlanningBase {
    * @brief main logic of the planning module, runs periodically triggered by
    * timer.
    */
+
+  
+  //void RunOnce(const LocalView& local_view,
+  //             ADCTrajectory* const ptr_trajectory_pb) override;
+  //custom changes
   void RunOnce(const LocalView& local_view,
-               ADCTrajectory* const ptr_trajectory_pb) override;
+               ADCTrajectory* const ptr_trajectory_pb,
+               std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+  std::shared_ptr<cyber::Writer<roi_boundary_message>>* roi_boundary_writer_,
+                                                bool flag_trajectory,
+                            std::vector<std::pair<double, double>>* trajectory,
+                            std::vector<point_info>* polamp_trajectory_info) override;
+
 
   common::Status Plan(
       const double current_time_stamp,
@@ -78,6 +89,17 @@ class OnLanePlanning : public PlanningBase {
 
   void ExportReferenceLineDebug(planning_internal::Debug* debug);
   bool CheckPlanningConfig(const PlanningConfig& config);
+
+
+  /*
+    custom changes: 
+  */
+  //------------------------------------------------
+  void GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+                      std::unique_ptr<apollo::planning::Frame>* frame_);
+
+  //------------------------------------------------
+
   void GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb);
   void ExportFailedLaneChangeSTChart(const planning_internal::Debug& debug_info,
                                      planning_internal::Debug* debug_chart);

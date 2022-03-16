@@ -52,6 +52,16 @@
 namespace apollo {
 namespace planning {
 
+struct point_info {
+  double x;
+  double y;
+  double phi;
+  double v;
+  double a;
+  double steer;
+  double accumulated_s;
+};
+
 /**
  * @class Frame
  *
@@ -182,6 +192,13 @@ class Frame {
     return pad_msg_driving_action_;
   }
 
+  //custom changes:
+  std::vector<common::math::Vec2d> roi_boundary_points;
+  std::vector< std::pair<double, double> > polamp_trajectory;
+  std::vector<point_info> polamp_trajectory_info;
+  bool polamp_ready;
+
+  
  private:
   common::Status InitFrameData(
       const common::VehicleStateProvider *vehicle_state_provider,
@@ -245,6 +262,7 @@ class Frame {
   std::vector<routing::LaneWaypoint> future_route_waypoints_;
 
   common::monitor::MonitorLogBuffer monitor_logger_buffer_;
+
 };
 
 class FrameHistory : public IndexedQueue<uint32_t, Frame> {

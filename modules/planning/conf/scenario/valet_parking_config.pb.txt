@@ -1,6 +1,6 @@
 scenario_type: VALET_PARKING
 valet_parking_config: {
-  parking_spot_range_to_start: 20.0
+  parking_spot_range_to_start: 50.0
   max_valid_stop_distance: 1.0
 }
 

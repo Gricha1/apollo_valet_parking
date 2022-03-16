@@ -89,6 +89,7 @@ Status OpenSpaceRoiDecider::Process(Frame *frame) {
 
     SetOrigin(frame, spot_vertices);
 
+
     SetParkingSpotEndPose(frame, spot_vertices);
 
     if (!GetParkingBoundary(frame, spot_vertices, nearby_path, &roi_boundary)) {
@@ -150,8 +151,77 @@ Status OpenSpaceRoiDecider::Process(Frame *frame) {
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
 
+  
+  //custom changes: save roi boundaries
+  std::vector<Vec2d> all_boundary_points;
+
+  GetBoundaryPoints(roi_boundary, frame, all_boundary_points);
+
+  //get vehicle position
+  Vec2d vehicle_relative_position;
+  vehicle_relative_position.set_x(vehicle_state_.x() - 
+          frame->open_space_info().origin_point().x());
+  vehicle_relative_position.set_y(vehicle_state_.y() - 
+          frame->open_space_info().origin_point().y());
+  all_boundary_points.push_back(vehicle_relative_position);
+  //get origin point
+  Vec2d vehicle_origin;
+  vehicle_origin.set_x( 
+          frame->open_space_info().origin_point().x());
+  vehicle_origin.set_y( 
+          frame->open_space_info().origin_point().y());
+  all_boundary_points.push_back(vehicle_origin);
+
+  LoadBoundaryPoints(frame, all_boundary_points);
+
   return Status::OK();
 }
+
+
+  /*
+    custom changes: save roi boundaries
+  */
+ //-------------------------------------------------------
+void OpenSpaceRoiDecider::LoadBoundaryPoints(
+    Frame *const frame, std::vector<common::math::Vec2d> &all_boundary_points){
+      for (auto it = all_boundary_points.begin(); it != all_boundary_points.end(); it++){
+            frame->roi_boundary_points.push_back(*it);
+      }
+}
+
+void OpenSpaceRoiDecider::GetBoundaryPoints(
+  const std::vector<std::vector<common::math::Vec2d>> &roi_parking_boundary,
+    Frame *const frame, std::vector<common::math::Vec2d> &all_boundary_points){
+
+      std::vector<Vec2d> all_boundary_points_related;
+      Vec2d temp_point;
+      int count = 0;
+
+      for (unsigned int i = 0; i < (roi_parking_boundary).size(); i++){
+        for (unsigned int j = 0; j < (roi_parking_boundary)[i].size(); j++){
+          all_boundary_points_related.push_back((roi_parking_boundary)[i][j]);
+        }
+      }
+
+      for (auto it = all_boundary_points_related.begin(); it != all_boundary_points_related.end(); it++){
+            //if (count == 2 || count == 4) {
+            //  count++;
+            //  it++;
+            //  continue;
+            //} 
+
+            temp_point = *it;
+            //temp_point.set_x(temp_point.x() + frame->open_space_info().origin_point().x());
+            //temp_point.set_y(temp_point.y() + frame->open_space_info().origin_point().y());
+            temp_point.set_x(temp_point.x());
+            temp_point.set_y(temp_point.y());
+            all_boundary_points.push_back(temp_point);
+            count++;
+      }
+}
+
+//-------------------------------------------------------
+
 
 // get origin from ADC
 void OpenSpaceRoiDecider::SetOriginFromADC(Frame *const frame,
@@ -632,8 +702,19 @@ void OpenSpaceRoiDecider::AddBoundaryKeyPoint(
     double point_vec_sin =
         is_left_curb ? std::sin(current_check_point_heading + M_PI / 2.0)
                      : std::sin(current_check_point_heading - M_PI / 2.0);
-    Vec2d curb_lane_point = Vec2d(current_road_width * point_vec_cos,
+    //DEBUG
+    //Vec2d curb_lane_point = Vec2d(current_road_width * point_vec_cos,
+    //                              current_road_width * point_vec_sin);
+    Vec2d curb_lane_point ;
+    if (is_left_curb){
+      curb_lane_point = Vec2d(current_road_width * point_vec_cos,
+                                  (current_road_width+0.9) * point_vec_sin);
+    } else {
+      curb_lane_point = Vec2d(current_road_width * point_vec_cos,
                                   current_road_width * point_vec_sin);
+    }
+
+    
     curb_lane_point = curb_lane_point + current_check_point;
     center_lane_boundary->push_back(current_check_point);
     curb_lane_boundary->push_back(curb_lane_point);
@@ -713,7 +794,10 @@ bool OpenSpaceRoiDecider::GetParkingBoundary(
   right_down -= origin_point;
   right_down.SelfRotate(-origin_heading);
 
+  //------------------добавка---------------------------------------
   const double center_line_s = (left_top_s + right_top_s) / 2.0;
+  //const double center_line_s = right_top_s + std::abs((left_top_s - right_top_s) * 3.0) / 4.0;
+
   std::vector<Vec2d> left_lane_boundary;
   std::vector<Vec2d> right_lane_boundary;
   // The pivot points on the central lane, mapping with the key points on
@@ -753,8 +837,29 @@ bool OpenSpaceRoiDecider::GetParkingBoundary(
     // if average_l is lower than zero, the parking spot is on the right
     // lane boundary and assume that the lane half width is average_l
     ADEBUG << "average_l is less than 0 in OpenSpaceROI";
+
+    /*
+      DEBUG
+      watch for lane points
+    */
+    //------------------
+    //AERROR << "size of the right lane: " << right_lane_boundary.size() << std::endl;
+    //------------------
+
     size_t point_size = right_lane_boundary.size();
     for (size_t i = 0; i < point_size; i++) {
+
+      /*
+        DEBUG
+        watch for lane points
+      
+      //------------------------------------------------------------------------
+      AERROR << "before trainsform" << "(" << right_lane_boundary[i].x() << "," 
+             << right_lane_boundary[i].y() << ")" << std::endl;
+
+      //------------------------------------------------------------------------
+      */
+
       right_lane_boundary[i].SelfRotate(origin_heading);
       right_lane_boundary[i] += origin_point;
       right_lane_boundary[i] -= center_lane_boundary_right[i];
@@ -763,6 +868,18 @@ bool OpenSpaceRoiDecider::GetParkingBoundary(
       right_lane_boundary[i] += center_lane_boundary_right[i];
       right_lane_boundary[i] -= origin_point;
       right_lane_boundary[i].SelfRotate(-origin_heading);
+
+      /*
+        DEBUG
+        watch for lane points
+      
+      //------------------------------------------------------------------------
+      AERROR << "after trainsform" << "(" << right_lane_boundary[i].x() << "," 
+             << right_lane_boundary[i].y() << ")" << std::endl;
+
+      //------------------------------------------------------------------------
+      */
+
     }
 
     auto point_left_to_left_top_connor_s = std::lower_bound(
@@ -829,6 +946,34 @@ bool OpenSpaceRoiDecider::GetParkingBoundary(
                                  right_lane_boundary[i + 1]};
       roi_parking_boundary->push_back(segment);
     }
+
+    /*
+      DEBUG
+      watch for parking boundaries
+    
+    //--------------------------------------------------------
+    AERROR << "DEBUG";
+    AERROR << "vehicle position: " << "(" << vehicle_state_.x() 
+           << "," << vehicle_state_.y() << ")" << std::endl;
+
+    AERROR << "left_stitching_segment: " << "(" << left_stitching_segment[0].x() << "," 
+           << left_stitching_segment[0].y() << ") " << " "
+           << "(" << left_stitching_segment[1].x() << "," 
+           << left_stitching_segment[1].y() << ") " << std::endl;
+
+    AERROR << "left segment: " << "(" << left_top.x() << "," << left_top.y() << ") "
+           << "(" << left_down.x() << "," << left_down.y() << ")" << std::endl;
+    AERROR << "down segment: " << "(" << left_down.x() << "," << left_down.y() << ") "
+           << "(" << right_down.x() << "," << right_down.y() << ")" << std:: endl;
+    AERROR << "right segment: " << "(" << right_down.x() << "," << right_down.y() << ") "
+           << "(" << right_top.x() << "," << right_top.y() << ")" << std::endl;
+
+    AERROR << "right_stitching_segment: " << "(" << right_stitching_segment[0].x() << "," 
+           << right_stitching_segment[0].y() << ") " << " "
+           << "(" << right_stitching_segment[1].x() << "," 
+           << right_stitching_segment[1].y() << ") " << std::endl;
+    //-------------------------------------------------
+    */
 
     size_t left_lane_boundary_last_index = left_lane_boundary.size() - 1;
     for (size_t i = left_lane_boundary_last_index; i > 0; i--) {
@@ -957,6 +1102,46 @@ bool OpenSpaceRoiDecider::GetParkingBoundary(
     AERROR << "vehicle outside of xy boundary of parking ROI";
     return false;
   }
+
+  /*
+  DEBUG
+  watch for lane points
+  
+  //------------------------------------------------------------------------
+  AERROR << "parking spot coordinates: " << std::endl;
+  AERROR << "left_top: " << left_top.x() << ", " << left_top.y() << std::endl;
+  AERROR << "left_down: " << left_down.x() << ", " << left_down.y() << std::endl;
+  AERROR << "right_down: " << right_down.x() << ", " << left_down.y() << std::endl;
+  AERROR << "right_top: " << right_top.x() << ", " << right_top.y() << std::endl;
+  */
+  /*
+  AERROR << "boundary_points size: " << boundary_points.size() 
+         << std::endl;
+
+  for (auto it = boundary_points.begin(); it != boundary_points.end(); it++){
+    AERROR << "(" << (*it).x() + frame->open_space_info().origin_point().x() 
+           << "," 
+           << (*it).y() + frame->open_space_info().origin_point().y()
+           << ")" << std::endl;
+  }
+  */
+
+  //AERROR << "roi_parking_boundary size: " << roi_parking_boundary->size() 
+  //       << std::endl;
+  
+  /*
+  for (unsigned int i = 0; i < (*roi_parking_boundary).size(); i++){
+    AERROR << "roi_parking " << i + 1 << " segment: " << std::endl; 
+    for (unsigned int j = 0; j < (*roi_parking_boundary)[i].size(); j++){
+      AERROR << "(" << (*roi_parking_boundary)[i][j].x() << ","
+             << (*roi_parking_boundary)[i][j].y() << ")" << std::endl;
+    }
+  }
+  */
+  
+  //------------------------------------------------------------------------
+  
+
   return true;
 }
 
@@ -1133,6 +1318,17 @@ bool OpenSpaceRoiDecider::GetParkAndGoBoundary(
   for (size_t i = 0; i < right_lane_boundary_last_index; i++) {
     std::vector<Vec2d> segment{right_lane_boundary[i],
                                right_lane_boundary[i + 1]};
+    //------------------------добавка------------------------
+
+    AERROR << "right segment";
+    AERROR << "right_road_boundary: [" << std::setprecision(9)
+           << right_lane_boundary[i].x() << ", " << right_lane_boundary[i].y()
+           << "]";
+    AERROR << "right_road_boundary: [" << std::setprecision(9)
+           << right_lane_boundary[i + 1].x() << ", "
+           << right_lane_boundary[i + 1].y() << "]";
+    //--------------------------------------------------
+
     ADEBUG << "right segment";
     ADEBUG << "right_road_boundary: [" << std::setprecision(9)
            << right_lane_boundary[i].x() << ", " << right_lane_boundary[i].y()

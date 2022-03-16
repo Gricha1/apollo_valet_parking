@@ -226,7 +226,24 @@ bool PlanningTestBase::RunPlanning(const std::string& test_case_name,
   std::string full_golden_path = FLAGS_test_data_dir + "/" + golden_result_file;
 
   ADCTrajectory adc_trajectory_pb;
-  planning_->RunOnce(local_view_, &adc_trajectory_pb);
+  /*
+    custom change: adding for getting roi boundaries
+  */
+  //------------------------------------------------------
+  //planning_->RunOnce(local_view_, &adc_trajectory_pb);
+  //roi_boundary_writer_ = node_->CreateWriter<roi_boundary_message>(
+  //    "get_roi_boundaries_topic");
+
+  auto roi_boundaries_pb = std::make_shared<roi_boundary_message>();
+  std::vector< std::pair<double, double> > trajectory = {};
+  std::vector<point_info> polamp_trajectory_info = {};
+
+  planning_->RunOnce(local_view_, &adc_trajectory_pb, 
+                               &roi_boundaries_pb,
+                              nullptr, false, &trajectory,
+                              &polamp_trajectory_info);
+
+  //------------------------------------------------------
 
   if (!IsValidTrajectory(adc_trajectory_pb)) {
     AERROR << "Fail to pass trajectory check.";

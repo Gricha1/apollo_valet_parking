@@ -94,6 +94,12 @@ Status OpenSpaceTrajectoryPartition::Process() {
   auto* interpolated_trajectory_result_ptr =
       open_space_info_ptr->mutable_interpolated_trajectory_result();
 
+  //------------------------------------ДОБАВКА------------------------------------------------------
+  //AERROR << "SIZE stitched in PARTITION SCRIPT: " << stitched_trajectory_result.size();
+  
+
+  //------------------------------------------------------------------------------------------
+
   InterpolateTrajectory(stitched_trajectory_result,
                         interpolated_trajectory_result_ptr);
 
@@ -102,6 +108,11 @@ Status OpenSpaceTrajectoryPartition::Process() {
 
   PartitionTrajectory(*interpolated_trajectory_result_ptr,
                       partitioned_trajectories);
+
+  //AERROR << "SIZE OF TRAJECTORY: " << partitioned_trajectories->size();
+  //if (partitioned_trajectories->size() > 1){
+  //  AERROR << "SIZE OF CHANGED TRAJECTORY: " << partitioned_trajectories->size();
+  //}
 
   const auto& open_space_status =
       injector_->planning_context()->planning_status().open_space();
@@ -231,6 +242,7 @@ Status OpenSpaceTrajectoryPartition::Process() {
     }
 
     if (use_fail_safe_search) {
+      AERROR << "##########################GENERATE FAIL SAFE TRAJECTORY################";
       if (!UseFailSafeSearch(*partitioned_trajectories, trajectories_encodings,
                              &current_trajectory_index,
                              &current_trajectory_point_index)) {
@@ -250,6 +262,7 @@ Status OpenSpaceTrajectoryPartition::Process() {
   ADEBUG << "chosen_partitioned_trajectory [" << trajectory->size() << "]";
 
   if (FLAGS_use_gear_shift_trajectory) {
+    AERROR << "##########################GENERATE SHIFT TRAJECTORY################";
     if (InsertGearShiftTrajectory(flag_change_to_next, current_trajectory_index,
                                   open_space_info.partitioned_trajectories(),
                                   chosen_partitioned_trajectory) &&
@@ -418,11 +431,23 @@ void OpenSpaceTrajectoryPartition::PartitionTrajectory(
       second_path_point.x() - first_path_point.x(),
       second_path_point.y() - first_path_point.y());
   double tracking_angle = init_tracking_vector.Angle();
+  //M_PI_2
+  //--------------------------------------------ДОБАВЛЕНИЕ--------------------------------------------
+  /*
   *gear =
       std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) <
               (M_PI_2)
           ? canbus::Chassis::GEAR_DRIVE
           : canbus::Chassis::GEAR_REVERSE;
+  */
+  double diff_angle = tracking_angle - heading_angle;
+  if (diff_angle < 0) diff_angle = diff_angle * (-1);
+  *gear =
+      diff_angle < (3)
+          ? canbus::Chassis::GEAR_DRIVE
+          : canbus::Chassis::GEAR_REVERSE;
+  //----------------------------------------------------------------------------------------
+
 
   // Set accumulated distance
   Vec2d last_pos_vec(first_path_point.x(), first_path_point.y());
@@ -440,11 +465,31 @@ void OpenSpaceTrajectoryPartition::PartitionTrajectory(
                                 next_trajectory_point.path_point().y() -
                                     trajectory_point.path_point().y());
     tracking_angle = tracking_vector.Angle();
+    //--------------------------------------------Добавление--------------------------------------------
+    /*
     auto cur_gear =
         std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) <
                 (M_PI_2)
             ? canbus::Chassis::GEAR_DRIVE
             : canbus::Chassis::GEAR_REVERSE;
+            0.0101
+    */
+    diff_angle = tracking_angle - heading_angle;
+    if (diff_angle < 0) diff_angle = diff_angle * (-1);
+    auto cur_gear =
+        diff_angle < (3)
+            ? canbus::Chassis::GEAR_DRIVE
+            : canbus::Chassis::GEAR_REVERSE;
+
+
+    //----------------------------------------------------------------------------------------
+
+    //------------------------------------Добавление------------------------------------
+    //AERROR << "heading for point " << i << " " << heading_angle << " tracking angle " << tracking_angle << " normalize " << abs(common::math::NormalizeAngle(tracking_angle - heading_angle));
+    //AERROR << i <<" diff_angle " << diff_angle << " heading " << heading_angle;
+
+
+    //----------------------------------------------------------------------------------
 
     if (cur_gear != *gear) {
       is_trajectory_last_point = true;
@@ -574,7 +619,7 @@ bool OpenSpaceTrajectoryPartition::UseFailSafeSearch(
     const std::vector<TrajGearPair>& partitioned_trajectories,
     const std::vector<std::string>& trajectories_encodings,
     size_t* current_trajectory_index, size_t* current_trajectory_point_index) {
-  AERROR << "Trajectory partition fail, using failsafe search";
+  AERROR << "Trajectory partition fail, using failsafe search, vehicle:" <<  ego_x_ << ego_y_;
   const size_t trajectories_size = partitioned_trajectories.size();
   std::priority_queue<std::pair<std::pair<size_t, size_t>, double>,
                       std::vector<std::pair<std::pair<size_t, size_t>, double>>,
@@ -681,6 +726,7 @@ bool OpenSpaceTrajectoryPartition::InsertGearShiftTrajectory(
 void OpenSpaceTrajectoryPartition::GenerateGearShiftTrajectory(
     const canbus::Chassis::GearPosition& gear_position,
     TrajGearPair* gear_switch_idle_time_trajectory) {
+  //AERROR << "GENERATE GEAR SHIFT TRAJECTORY";
   gear_switch_idle_time_trajectory->first.clear();
   const double gear_shift_max_t =
       open_space_trajectory_partition_config_.gear_shift_max_t();
@@ -699,6 +745,7 @@ void OpenSpaceTrajectoryPartition::GenerateGearShiftTrajectory(
     point.set_a(0.0);
     gear_switch_idle_time_trajectory->first.emplace_back(point);
   }
+  AERROR << "##########################GENERATE SHIFT TRAJECTORY#################";
   ADEBUG << "gear_switch_idle_time_trajectory"
          << gear_switch_idle_time_trajectory->first.size();
   gear_switch_idle_time_trajectory->second = gear_position;

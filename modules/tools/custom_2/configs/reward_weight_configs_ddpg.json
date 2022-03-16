@@ -1,0 +1,9 @@
+{
+    "collision": 1.8,
+    "goal": 0.82,
+    "timeStep": 0.1,
+    "distance": 2.0,
+    "reverse": 0.64,
+    "overSpeeding": 0.64,
+    "overSteering": 0.64
+}  

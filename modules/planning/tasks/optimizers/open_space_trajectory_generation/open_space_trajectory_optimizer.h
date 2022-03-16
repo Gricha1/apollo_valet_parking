@@ -56,7 +56,7 @@ class OpenSpaceTrajectoryOptimizer {
       const Eigen::MatrixXd& obstacles_A, const Eigen::MatrixXd& obstacles_b,
       const std::vector<std::vector<common::math::Vec2d>>&
           obstacles_vertices_vec,
-      double* time_latency);
+      double* time_latency, Frame *const frame);
 
   void GetStitchingTrajectory(
       std::vector<common::TrajectoryPoint>* stitching_trajectory) {
@@ -91,6 +91,10 @@ class OpenSpaceTrajectoryOptimizer {
   }
 
  private:
+
+  void MessageCallback(
+    std::shared_ptr<cyber::Writer<roi_boundary_message>>& msg);
+
   bool IsInitPointNearDestination(
       const common::TrajectoryPoint& planning_init_point,
       const std::vector<double>& end_pose, double rotate_angle,

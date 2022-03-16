@@ -37,7 +37,7 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf) {
       std::make_unique<ReedShepp>(vehicle_param_, planner_open_space_config_);
   grid_a_star_heuristic_generator_ =
       std::make_unique<GridSearch>(planner_open_space_config_);
-  next_node_num_ =
+  next_node_num_ = 
       planner_open_space_config_.warm_start_config().next_node_num();
   max_steer_angle_ =
       vehicle_param_.max_steer_angle() / vehicle_param_.steer_ratio();
@@ -49,12 +49,12 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf) {
       planner_open_space_config_.warm_start_config().traj_forward_penalty();
   traj_back_penalty_ =
       planner_open_space_config_.warm_start_config().traj_back_penalty();
-  traj_gear_switch_penalty_ =
+  traj_gear_switch_penalty_ = 
       planner_open_space_config_.warm_start_config().traj_gear_switch_penalty();
   traj_steer_penalty_ =
       planner_open_space_config_.warm_start_config().traj_steer_penalty();
   traj_steer_change_penalty_ = planner_open_space_config_.warm_start_config()
-                                   .traj_steer_change_penalty();
+                                   .traj_steer_change_penalty() * 2;
 }
 
 bool HybridAStar::AnalyticExpansion(std::shared_ptr<Node3d> current_node) {
@@ -268,6 +268,16 @@ bool HybridAStar::GetResult(HybridAStartResult* result) {
   std::reverse(hybrid_a_x.begin(), hybrid_a_x.end());
   std::reverse(hybrid_a_y.begin(), hybrid_a_y.end());
   std::reverse(hybrid_a_phi.begin(), hybrid_a_phi.end());
+  //------------------------------------------ДОБАВКА---------------------
+  //std::vector<double>::iterator it_x;
+  //std::vector<double>::iterator it_y;
+  //AERROR << "Hybrid_a_x SIZE " << hybrid_a_x.size();
+  //for (it_x = hybrid_a_x.begin(), it_y = hybrid_a_y.begin(); it_x != hybrid_a_x.end(); it_x++, it_y++){
+  //  AERROR << *it_x << " " << ;
+  //}
+
+  //------------------------------------------------------------------------------------
+
   (*result).x = hybrid_a_x;
   (*result).y = hybrid_a_y;
   (*result).phi = hybrid_a_phi;
@@ -340,6 +350,20 @@ bool HybridAStar::GenerateSpeedAcceleration(HybridAStartResult* result) {
     }
     result->steer.push_back(discrete_steer);
   }
+
+  /*
+    DEBUG
+    print velocities
+  
+  //----------------------------------------
+  AERROR << std::endl;
+  for (size_t i = 1; i + 1 < x_size; ++i) {
+    AERROR << "v: " << result->v[i] << " a:" << result->a[i] << std::endl;
+  }
+  */
+  //----------------------------------------
+
+
   return true;
 }
 
@@ -364,7 +388,7 @@ bool HybridAStar::GenerateSCurveSpeedAcceleration(HybridAStartResult* result) {
       std::abs(common::math::NormalizeAngle(
           init_heading - init_tracking_vector.Angle())) < M_PI_2;
 
-  // get path lengh
+  // get path lenght
   size_t path_points_size = result->x.size();
 
   double accumulated_s = 0.0;
@@ -452,6 +476,21 @@ bool HybridAStar::GenerateSCurveSpeedAcceleration(HybridAStartResult* result) {
   const std::vector<double>& s = piecewise_jerk_problem.opt_x();
   const std::vector<double>& ds = piecewise_jerk_problem.opt_dx();
   const std::vector<double>& dds = piecewise_jerk_problem.opt_ddx();
+
+  //-----------------------------------ДОБАВОЧКА
+  AERROR << "ACCUMULATED: " << std::endl;
+  for (auto it = result->accumulated_s.begin(); it != result->accumulated_s.end(); it++){
+    AERROR << *it << " ";
+  }
+  AERROR << "S:" << std::endl;
+  for (auto it = s.begin(); it != s.end(); it++){
+    AERROR << *it << " ";
+  }
+
+
+  //-------------------------------------------
+
+
 
   // assign speed point by gear
   speed_data.AppendSpeedPoint(s[0], 0.0, ds[0], dds[0], 0.0);
@@ -554,6 +593,12 @@ bool HybridAStar::TrajectoryPartition(
   }
 
   size_t horizon = x.size();
+  
+  //DEBUG
+  AWARN << "horizon: "
+        << horizon
+        << std::endl;
+
   partitioned_result->clear();
   partitioned_result->emplace_back();
   auto* current_traj = &(partitioned_result->back());
@@ -563,7 +608,15 @@ bool HybridAStar::TrajectoryPartition(
   bool current_gear =
       std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) <
       (M_PI_2);
+
+  //DEBUG
+  std::vector<bool> gears_of_points = {};
+
   for (size_t i = 0; i < horizon - 1; ++i) {
+
+    //DEBUG
+    gears_of_points.push_back(current_gear);
+
     heading_angle = phi[i];
     const Vec2d tracking_vector(x[i + 1] - x[i], y[i + 1] - y[i]);
     tracking_angle = tracking_vector.Angle();
@@ -582,6 +635,8 @@ bool HybridAStar::TrajectoryPartition(
     current_traj->y.push_back(y[i]);
     current_traj->phi.push_back(phi[i]);
   }
+
+
   current_traj->x.push_back(x.back());
   current_traj->y.push_back(y.back());
   current_traj->phi.push_back(phi.back());
@@ -589,6 +644,8 @@ bool HybridAStar::TrajectoryPartition(
   const auto start_timestamp = std::chrono::system_clock::now();
 
   // Retrieve v, a and steer from path
+  //FLAGS_use_s_curve_speed_smooth = true;
+
   for (auto& result : *partitioned_result) {
     if (FLAGS_use_s_curve_speed_smooth) {
       if (!GenerateSCurveSpeedAcceleration(&result)) {
@@ -602,6 +659,35 @@ bool HybridAStar::TrajectoryPartition(
       }
     }
   }
+
+  /*
+  AWARN << "DEGUB polamp" << std::endl;
+  
+  //DEBUG
+  
+  const auto& x_debug = result.x;
+  const auto& y_debug = result.y;
+  const auto& v_debug = result.v;
+  const auto& a_debug = result.a;
+  AWARN << "full trajectory with gear: "
+        << x_debug.size() << " "
+        << y_debug.size() << " "
+        << v_debug.size() << " "
+        << a_debug.size() << " "
+        << gears_of_points.size() << " "
+        << std::endl;
+  
+  for (size_t i = 0; i < v_debug.size(); ++i) {
+    AWARN << "x: " << x_debug[i] << " "
+          << "y: " << y_debug[i] << " "
+          << "v: " << v_debug[i] << " "
+          << "a: " << a_debug[i] << " "
+          << "gear: " << gears_of_points[i]
+          << std::endl;
+  }
+  AWARN << "####################################"
+        << std::endl;
+  */
 
   const auto end_timestamp = std::chrono::system_clock::now();
   std::chrono::duration<double> diff = end_timestamp - start_timestamp;
@@ -643,6 +729,8 @@ bool HybridAStar::Plan(
     const std::vector<double>& XYbounds,
     const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
     HybridAStartResult* result) {
+
+
   // clear containers
   open_set_.clear();
   close_set_.clear();
@@ -726,11 +814,19 @@ bool HybridAStar::Plan(
         CalculateNodeCost(current_node, next_node);
         const double end_time = Clock::NowInSeconds();
         heuristic_time += end_time - start_time;
+        //-------------------------ДОБАВКА-------------------------
+        next_node->SetHeuCost(0);
+
+        
+        //-----------------------------------
+        
         open_set_.emplace(next_node->GetIndex(), next_node);
         open_pq_.emplace(next_node->GetIndex(), next_node->GetCost());
       }
     }
   }
+
+  
   if (final_node_ == nullptr) {
     ADEBUG << "Hybrid A searching return null ptr(open_set ran out)";
     return false;
