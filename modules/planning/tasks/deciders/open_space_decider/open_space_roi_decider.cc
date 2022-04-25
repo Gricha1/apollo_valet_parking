@@ -157,6 +157,12 @@ Status OpenSpaceRoiDecider::Process(Frame *frame) {
 
   GetBoundaryPoints(roi_boundary, frame, all_boundary_points);
 
+  
+  //AWARN << "roi: vehicle pos"
+  //      << " x: " << vehicle_state_.x()
+  //      << " y: " << vehicle_state_.y()
+  //      << std::endl;
+
   //get vehicle position
   Vec2d vehicle_relative_position;
   vehicle_relative_position.set_x(vehicle_state_.x() - 
@@ -702,10 +708,12 @@ void OpenSpaceRoiDecider::AddBoundaryKeyPoint(
     double point_vec_sin =
         is_left_curb ? std::sin(current_check_point_heading + M_PI / 2.0)
                      : std::sin(current_check_point_heading - M_PI / 2.0);
+                     
     //DEBUG
-    //Vec2d curb_lane_point = Vec2d(current_road_width * point_vec_cos,
-    //                              current_road_width * point_vec_sin);
-    Vec2d curb_lane_point ;
+    Vec2d curb_lane_point = Vec2d(current_road_width * point_vec_cos,
+                                  current_road_width * point_vec_sin);
+    /*
+    Vec2d curb_lane_point;
     if (is_left_curb){
       curb_lane_point = Vec2d(current_road_width * point_vec_cos,
                                   (current_road_width+0.9) * point_vec_sin);
@@ -713,6 +721,7 @@ void OpenSpaceRoiDecider::AddBoundaryKeyPoint(
       curb_lane_point = Vec2d(current_road_width * point_vec_cos,
                                   current_road_width * point_vec_sin);
     }
+    */
 
     
     curb_lane_point = curb_lane_point + current_check_point;

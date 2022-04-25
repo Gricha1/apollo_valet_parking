@@ -42,7 +42,7 @@ Please refer [open_space_trajectory_optimizer.cc](https://github.com/ApolloAuto/
                         "trajectory generation");
         }
       ```
-      3. End of the stitching trajectory is rotated and translated, and the trajectory information is converted according to the corner     of the parking space.
+      3. End of the stitching trajectory is rotated and translated, and the trajectory information is converted according to the corner of the parking space.
       ``` cpp
       PathPointNormalizing(rotate_angle, translate_origin, &init_x, &init_y,
                             &init_phi)

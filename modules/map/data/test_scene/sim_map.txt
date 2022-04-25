@@ -11960,119 +11960,6 @@ lane {
 }
 lane {
   id {
-    id: "7_0_-1"
-  }
-  central_curve {
-    segment {
-      line_segment {
-        point {
-          x: 388930.98204621568
-          y: 221208.00096006872
-          z: 0.195343017578125
-        }
-        point {
-          x: 389061.6819713689
-          y: 221207.92130033261
-          z: 0.195343017578125
-        }
-      }
-      s: 0
-      start_position {
-        x: 388930.98204621568
-        y: 221208.00096006872
-        z: 0.195343017578125
-      }
-      length: 130.73230196927142
-    }
-  }
-  left_boundary {
-    curve {
-      segment {
-        line_segment {
-          point {
-            x: 388930.9831125561
-            y: 221209.75052698323
-            z: 0.195343017578125
-          }
-          point {
-            x: 389061.68303770857
-            y: 221209.67086661732
-            z: 0.195343017578125
-          }
-        }
-        s: 0
-        start_position {
-          x: 388930.9831125561
-          y: 221209.75052698323
-          z: 0.195343017578125
-        }
-        length: 130.73230196927142
-      }
-    }
-    length: 130.73230196927142
-    virtual: true
-    boundary_type {
-      s: 0
-      types: SOLID_YELLOW
-    }
-  }
-  right_boundary {
-    curve {
-      segment {
-        line_segment {
-          point {
-            x: 388930.98097988369
-            y: 221206.25139315415
-            z: 0.195343017578125
-          }
-          point {
-            x: 389061.68090503768
-            y: 221206.17173404788
-            z: 0.195343017578125
-          }
-        }
-        s: 0
-        start_position {
-          x: 388930.98097988369
-          y: 221206.25139315415
-          z: 0.195343017578125
-        }
-        length: 130.73230196927142
-      }
-    }
-    length: 130.73230196927142
-    virtual: true
-    boundary_type {
-      s: 0
-      types: UNKNOWN
-    }
-  }
-  length: 130.73230196927142
-  speed_limit: 111.11080169677734
-  overlap_id {
-    id: "overlap_parking_1"
-  }
-  overlap_id {
-    id: "overlap_parking_2"
-  }
-  predecessor_id {
-    id: "53_0_-1"
-  }
-  predecessor_id {
-    id: "55_0_1"
-  }
-  successor_id {
-    id: "104_0_-1"
-  }
-  type: CITY_DRIVING
-  turn: NO_TURN
-  right_neighbor_reverse_lane_id {
-    id: "7_0_-2"
-  }
-  direction: FORWARD
-}
-lane {
-  id {
     id: "7_0_-2"
   }
   central_curve {
@@ -34033,6 +33920,167 @@ lane {
   turn: NO_TURN
   direction: FORWARD
 }
+lane {
+  id {
+    id: "7_0_-1"
+  }
+  central_curve {
+    segment {
+      line_segment {
+        point {
+          x: 388930.98204621568
+          y: 221208.00096006872
+          z: 0.195343017578125
+        }
+        point {
+          x: 389061.6819713689
+          y: 221207.92130033261
+          z: 0.195343017578125
+        }
+      }
+      s: 0
+      start_position {
+        x: 388930.98204621568
+        y: 221208.00096006872
+        z: 0.195343017578125
+      }
+      length: 130.73230196927142
+    }
+  }
+  left_boundary {
+    curve {
+      segment {
+        line_segment {
+          point {
+            x: 388930.9831125561
+            y: 221209.75052698323
+            z: 0.195343017578125
+          }
+          point {
+            x: 389061.68303770857
+            y: 221209.67086661732
+            z: 0.195343017578125
+          }
+        }
+        s: 0
+        start_position {
+          x: 388930.9831125561
+          y: 221209.75052698323
+          z: 0.195343017578125
+        }
+        length: 130.73230196927142
+      }
+    }
+    length: 130.73230196927142
+    virtual: true
+    boundary_type {
+      s: 0
+      types: SOLID_YELLOW
+    }
+  }
+  right_boundary {
+    curve {
+      segment {
+        line_segment {
+          point {
+            x: 388930.98097988369
+            y: 221206.25139315415
+            z: 0.195343017578125
+          }
+          point {
+            x: 389061.68090503768
+            y: 221206.17173404788
+            z: 0.195343017578125
+          }
+        }
+        s: 0
+        start_position {
+          x: 388930.98097988369
+          y: 221206.25139315415
+          z: 0.195343017578125
+        }
+        length: 130.73230196927142
+      }
+    }
+    length: 130.73230196927142
+    virtual: true
+    boundary_type {
+      s: 0
+      types: UNKNOWN
+    }
+  }
+  length: 130.73230196927142
+  speed_limit: 111.11080169677734
+  overlap_id {
+    id: "overlap_place_18"
+  }
+  overlap_id {
+    id: "overlap_place_17"
+  }
+  overlap_id {
+    id: "overlap_place_16"
+  }
+  overlap_id {
+    id: "overlap_place_15"
+  }
+  overlap_id {
+    id: "overlap_place_14"
+  }
+  overlap_id {
+    id: "overlap_place_13"
+  }
+  overlap_id {
+    id: "overlap_place_12"
+  }
+  overlap_id {
+    id: "overlap_place_11"
+  }
+  overlap_id {
+    id: "overlap_place_10"
+  }
+  overlap_id {
+    id: "overlap_place_9"
+  }
+  overlap_id {
+    id: "overlap_place_8"
+  }
+  overlap_id {
+    id: "overlap_place_7"
+  }
+  overlap_id {
+    id: "overlap_place_6"
+  }
+  overlap_id {
+    id: "overlap_place_5"
+  }
+  overlap_id {
+    id: "overlap_place_4"
+  }
+  overlap_id {
+    id: "overlap_place_3"
+  }
+  overlap_id {
+    id: "overlap_place_2"
+  }
+  overlap_id {
+    id: "overlap_place_1"
+  }
+  predecessor_id {
+    id: "53_0_-1"
+  }
+  predecessor_id {
+    id: "55_0_1"
+  }
+  successor_id {
+    id: "104_0_-1"
+  }
+  type: CITY_DRIVING
+  turn: NO_TURN
+  right_neighbor_reverse_lane_id {
+    id: "7_0_-2"
+  }
+  direction: FORWARD
+}
 signal {
   id {
     id: "128"
@@ -40810,50 +40858,6 @@ signal {
           z: 0
         }
       }
-    }
-  }
-}
-overlap {
-  id {
-    id: "overlap_parking_1"
-  }
-  object {
-    id {
-      id: "7_0_-1"
-    }
-    lane_overlap_info {
-      start_s: 0
-      end_s: 0
-      is_merge: false
-    }
-  }
-  object {
-    id {
-      id: "parking_space_1"
-    }
-    parking_space_overlap_info {
-    }
-  }
-}
-overlap {
-  id {
-    id: "overlap_parking_2"
-  }
-  object {
-    id {
-      id: "7_0_-1"
-    }
-    lane_overlap_info {
-      start_s: 0
-      end_s: 0
-      is_merge: false
-    }
-  }
-  object {
-    id {
-      id: "parking_space_2"
-    }
-    parking_space_overlap_info {
     }
   }
 }
@@ -45087,6 +45091,402 @@ overlap {
   object {
     id {
       id: "{7a049fbc-66b9-4036-b425-a49fc076aade}"
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_1"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_1"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_2"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_2"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_3"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_3"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_4"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_4"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_5"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_5"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_6"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_6"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_7"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_7"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_8"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_8"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_9"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_9"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_10"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_10"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_11"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_11"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_12"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_12"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_13"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_13"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_14"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_14"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_15"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_15"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_16"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_16"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_17"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_17"
+    }
+    parking_space_overlap_info {
+    }
+  }
+}
+overlap {
+  id {
+    id: "overlap_place_18"
+  }
+  object {
+    id {
+      id: "7_0_-1"
+    }
+    lane_overlap_info {
+      start_s: 0
+      end_s: 0
+      is_merge: false
+    }
+  }
+  object {
+    id {
+      id: "place_18"
+    }
+    parking_space_overlap_info {
     }
   }
 }
@@ -65687,63 +66087,559 @@ road {
 }
 parking_space {
   id {
-    id: "parking_space_1"
+    id: "place_1"
   }
   polygon {
     point {
-      x: 388977.32
-      y: 221201.84
+      x: 388956.89
+      y: 221204.03
       z: 0
     }
     point {
-      x: 388981.32
-      y: 221201.84
+      x: 388961.89
+      y: 221204.03
       z: 0
     }
     point {
-      x: 388981.32
-      y: 221196.24
+      x: 388961.89
+      y: 221198.03
       z: 0
     }
     point {
-      x: 388977.32
-      y: 221196.24
+      x: 388956.89
+      y: 221198.03
       z: 0
     }
   }
   overlap_id {
-    id: "overlap_parking_1"
+    id: "overlap_place_1"
   }
   heading: 1.570796
 }
 parking_space {
   id {
-    id: "parking_space_2"
+    id: "place_2"
   }
   polygon {
     point {
-      x: 388997.13
-      y: 221202.34
+      x: 388961.89
+      y: 221204.03
       z: 0
     }
     point {
-      x: 389000.82
-      y: 221202.34
+      x: 388966.89
+      y: 221204.03
       z: 0
     }
     point {
-      x: 389000.82
-      y: 221196.24
+      x: 388966.89
+      y: 221198.03
       z: 0
     }
     point {
-      x: 388997.13
-      y: 221196.24
+      x: 388961.89
+      y: 221198.03
       z: 0
     }
   }
   overlap_id {
-    id: "overlap_parking_2"
+    id: "overlap_place_2"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_3"
+  }
+  polygon {
+    point {
+      x: 388966.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388971.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388971.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388966.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_3"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_4"
+  }
+  polygon {
+    point {
+      x: 388971.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388976.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388976.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388971.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_4"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_5"
+  }
+  polygon {
+    point {
+      x: 388976.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388981.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388981.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388976.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_5"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_6"
+  }
+  polygon {
+    point {
+      x: 388981.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388986.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388986.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388981.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_6"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_7"
+  }
+  polygon {
+    point {
+      x: 388986.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388991.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388991.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388986.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_7"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_8"
+  }
+  polygon {
+    point {
+      x: 388991.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388996.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 388996.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388991.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_8"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_9"
+  }
+  polygon {
+    point {
+      x: 388996.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389001.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389001.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 388996.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_9"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_10"
+  }
+  polygon {
+    point {
+      x: 389001.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389006.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389006.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389001.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_10"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_11"
+  }
+  polygon {
+    point {
+      x: 389006.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389011.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389011.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389006.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_11"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_12"
+  }
+  polygon {
+    point {
+      x: 389011.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389016.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389016.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389011.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_12"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_13"
+  }
+  polygon {
+    point {
+      x: 389016.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389021.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389021.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389016.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_13"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_14"
+  }
+  polygon {
+    point {
+      x: 389021.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389026.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389026.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389021.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_14"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_15"
+  }
+  polygon {
+    point {
+      x: 389026.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389031.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389031.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389026.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_15"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_16"
+  }
+  polygon {
+    point {
+      x: 389031.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389036.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389036.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389031.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_16"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_17"
+  }
+  polygon {
+    point {
+      x: 389036.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389041.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389041.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389036.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_17"
+  }
+  heading: 1.570796
+}
+parking_space {
+  id {
+    id: "place_18"
+  }
+  polygon {
+    point {
+      x: 389041.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389046.89
+      y: 221204.03
+      z: 0
+    }
+    point {
+      x: 389046.89
+      y: 221198.03
+      z: 0
+    }
+    point {
+      x: 389041.89
+      y: 221198.03
+      z: 0
+    }
+  }
+  overlap_id {
+    id: "overlap_place_18"
   }
   heading: 1.570796
 }

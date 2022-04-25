@@ -48,6 +48,11 @@ message roi_point {
   optional double a = 5;
   optional double steer = 6;
   optional double accumulated_s = 7;
+  optional double length = 8;
+  optional double width = 9;
+  optional double theta = 10;
+  optional double v_x = 11;
+  optional double v_y = 12;
 }
 
 message roi_boundary_message {

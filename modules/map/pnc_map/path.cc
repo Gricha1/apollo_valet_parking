@@ -441,6 +441,7 @@ void Path::InitWidth() {
   for (int i = 0; i < num_sample_points_; ++i) {
     const MapPathPoint point = GetSmoothPoint(s);
     if (point.lane_waypoints().empty()) {
+      //-------------ДОБАВКА----------------------------------------------------
       lane_left_width_.push_back(FLAGS_default_lane_width / 2.0);
       lane_right_width_.push_back(FLAGS_default_lane_width / 2.0);
 

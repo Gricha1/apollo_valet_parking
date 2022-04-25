@@ -39,11 +39,37 @@ class VehicleConfig:
         self.delta_t = car_config["delta_t"]
         self.rear_to_center = (self.length - self.wheel_base) / 2.
         self.min_dist_to_check_collision = math.hypot(self.rear_to_center + self.length / 2., self.width / 2.)
-        
+
+        ##
+        self.jerk = car_config["jerk"]
+        self.use_clip = car_config["use_clip"]
+        if self.jerk != 0:
+                self.is_jerk = True
+        else:
+            self.is_jerk = False
+            
     
     def dynamic(self, state, action):
         a = action[0]
         Eps = action[1]
+
+        #custom adding:
+        if self.use_clip:
+            a = np.clip(a, -self.max_acc, self.max_acc)
+            Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
+        
+
+        ##
+        if self.jerk:
+          if abs(a - self.a) > self.jerk:
+            if a > self.a:
+                a = self.a + abs(a - self.a)
+            else:
+                a = self.a - abs(a - self.a)
+        #debug
+        #a = 2
+        #Eps = 0
+        
         dt = self.delta_t
         self.a = a
         self.Eps = Eps
@@ -72,37 +98,7 @@ class VehicleConfig:
         new_state = State(x, y, theta, V, steer)
 
         return new_state, overSpeeding, overSteering
-    
-    '''
-    def dynamic(self, state, action):
-        a = action[0]
-        Eps = action[1]
-        dt = self.delta_t
-        
-        dV = a * dt
-        V = state.v + dV
-        overSpeeding = V > self.max_vel or V < self.min_vel
-        V = np.clip(V, self.min_vel, self.max_vel)
-
-        dw = Eps * dt
-        dsteer = dw * dt
-        steer = normalizeAngle(state.steer + dsteer)
-        overSteering = abs(steer) > self.max_steer
-        steer = np.clip(steer, -self.max_steer, self.max_steer)
-
-        dtheta = (V * np.tan(steer) / self.wheel_base) * dt
-        theta = normalizeAngle(state.theta + dtheta)
-
-        dx = V * np.cos(theta) * dt
-        dy = V * np.sin(theta) * dt
-        x = state.x + dx
-        y = state.y + dy
-
-        new_state = State(x, y, theta, V, steer)
-
-        return new_state, overSpeeding, overSteering
-    '''
-    
+     
     def shift_state(self, state, toCenter=False):
         l = self.length / 2
         shift = l - self.rear_to_center
@@ -137,6 +133,7 @@ class ObsEnvironment(gym.Env):
         self.min_obs_v = env_config['min_obs_v']
         self.max_obs_v = env_config['max_obs_v']
         self.HARD_EPS = env_config['HARD_EPS']
+        self.MEDIUM_EPS = env_config['MEDIUM_EPS']
         self.SOFT_EPS = env_config['SOFT_EPS']
         self.ANGLE_EPS = degToRad(env_config['ANGLE_EPS'])
         self.SPEED_EPS = kmToM(env_config['SPEED_EPS'])
@@ -145,13 +142,16 @@ class ObsEnvironment(gym.Env):
         self.UPDATE_SPARSE = env_config['UPDATE_SPARSE']
         self.view_angle = degToRad(env_config['view_angle'])
         self.hard_constraints = env_config['hard_constraints']
+        self.medium_constraints = env_config['medium_constraints']
         self.soft_constraints = env_config['soft_constraints']
         self.affine_transform = env_config['affine_transform']
         self.with_potential = env_config['reward_with_potential']
         self.frame_stack = env_config['frame_stack']
         self.bias_beam = env_config['bias_beam']
         self.n_beams = env_config['n_beams']
+        self.use_acceleration_penalties = env_config['use_acceleration_penalties']
         self.dynamic_obstacles = []
+        self.dynamic_obstacles_v_s = []
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.collision_time = 0
@@ -164,13 +164,20 @@ class ObsEnvironment(gym.Env):
             self.reward_config["overSpeeding"],
             self.reward_config["overSteering"]
         ]
+        if self.use_acceleration_penalties:
+                self.reward_weights.append(self.reward_config["Eps_penalty"])
+                self.reward_weights.append(self.reward_config["a_penalty"])
         self.unionTask = env_config['union']
         if self.unionTask:
-            self.second_goal = State(config["second_goal"][0], 
+                self.second_goal = State(config["second_goal"][0], 
                                 config["second_goal"][1],
                                 config["second_goal"][2],
                                 config["second_goal"][3],
                                 config["second_goal"][4])
+        
+        assert self.hard_constraints \
+            + self.medium_constraints \
+            + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
 
         other_features = len(self.getDiff(State(0, 0, 0, 0, 0)))
         state_min_box = [-np.inf for _ in range(47)] * self.frame_stack + [-np.inf] * self.frame_stack
@@ -405,9 +412,11 @@ class ObsEnvironment(gym.Env):
                     if (np.random.randint(3) > 0):
                         for dyn_obst in dynamic_obstacles:
                             self.dynamic_obstacles.append(dyn_obst)
+                            self.dynamic_obstacles_v_s.append(0)
                 else:
                     for dyn_obst in dynamic_obstacles:
                         self.dynamic_obstacles.append(dyn_obst)
+                        self.dynamic_obstacles_v_s.append(0)
         else:
             current, goal = self.generateSimpleTask(obstacles)
 
@@ -423,10 +432,10 @@ class ObsEnvironment(gym.Env):
         self.obstacle_segments = []
         self.dyn_obstacle_segments = []
         self.dynamic_obstacles = []
+        self.dynamic_obstacles_v_s = []
         self.dyn_acc = 0
         self.dyn_ang_vel = 0
         self.dyn_ang_acc = 0
-        #self.vehicle.car_w = 0
         self.vehicle.v_s = 0
         self.vehicle.Eps = 0
         self.vehicle.a = 0
@@ -436,7 +445,6 @@ class ObsEnvironment(gym.Env):
         else:
             self.first_goal_reached = True
         
-
         if fromTrain:
             index = np.random.randint(len(self.lst_keys))
             self.map_key = self.lst_keys[index]
@@ -458,12 +466,16 @@ class ObsEnvironment(gym.Env):
         for dyn_obst in self.dynamic_obstacles:
             if math.hypot(self.current_state.x - dyn_obst.x, self.current_state.y - dyn_obst.y) < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
                 center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-                self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
-
+                width = self.vehicle.width / 2 + 0.3
+                length = self.vehicle.length / 2 + 0.1
+                agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+                self.dyn_obstacle_segments.append(agentBB)
+                #self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
         if self.goal.theta != degToRad(90):
             self.task = 1 #forward task
         else:
             self.task = -1 #backward task
+        self.start_dist = self.__goalDist(self.current_state)
 
         observation, _, _ = self.__getObservation(self.current_state)
         
@@ -496,10 +508,14 @@ class ObsEnvironment(gym.Env):
             reward.append(0)
             reward.append(0)
             reward.append(0)
-
-        # reward = np.array(reward)
+        
+        if self.use_acceleration_penalties:
+                reward.append(-abs(self.vehicle.Eps))
+                reward.append(-abs(self.vehicle.a))
+	
 
         return np.matmul(self.reward_weights, reward)
+        
 
     def isCollision(self, state, min_beam, lst_indexes=[]):
         
@@ -526,6 +542,45 @@ class ObsEnvironment(gym.Env):
 
     def __goalDist(self, state):
         return math.hypot(self.goal.x - state.x, self.goal.y - state.y )
+    
+    def obst_dynamic(self, state, action, previous_v_s, constant_forward=True):
+        a = action[0]
+        Eps = action[1]
+        dt = self.vehicle.delta_t
+        #if self.vehicle.is_jerk:
+        #    if abs(a - self.a) > self.jerk:
+        #        if a > self.a:
+        #            a = self.a + abs(a - self.a)
+        #        else:
+        #            a = self.a - abs(a - self.a)
+        if constant_forward:
+            a = 0
+            Eps = 0
+        dV = a * dt
+        V = state.v + dV
+        overSpeeding = V > self.vehicle.max_vel or V < self.vehicle.min_vel
+        V = np.clip(V, self.vehicle.min_vel, self.vehicle.max_vel)
+
+        dv_s = Eps * dt
+        v_s = previous_v_s + dv_s
+        dsteer = v_s * dt
+        steer = normalizeAngle(state.steer + dsteer)
+        overSteering = abs(steer) > self.vehicle.max_steer
+        steer = np.clip(steer, -self.vehicle.max_steer, self.vehicle.max_steer)
+
+        w = (V * np.tan(steer) / self.vehicle.wheel_base)
+        dtheta = w * dt
+        theta = normalizeAngle(state.theta + dtheta)
+
+        dx = V * np.cos(theta) * dt
+        dy = V * np.sin(theta) * dt
+        x = state.x + dx
+        y = state.y + dy
+
+        new_state = State(x, y, theta, V, steer)
+
+        return new_state, overSpeeding, overSteering, v_s
+
 
     def step(self, action, next_dyn_states=[]):
         info = {}
@@ -534,27 +589,39 @@ class ObsEnvironment(gym.Env):
         
         if len(self.dynamic_obstacles) > 0:
             dynamic_obstacles = []
+            dynamic_obstacles_v_s = []
             if not (self.stepCounter % self.UPDATE_SPARSE):
                 self.dyn_acc = np.random.randint(-self.vehicle.max_acc, self.vehicle.max_acc + 1)
                 self.dyn_ang_acc = np.random.randint(-self.vehicle.max_ang_acc, self.vehicle.max_ang_acc)
 
-            for index, dyn_obst in enumerate(self.dynamic_obstacles):
+            for index, (dyn_obst, v_s) in enumerate(zip(self.dynamic_obstacles, self.dynamic_obstacles_v_s)):
+            #for index, dyn_obst in enumerate(self.dynamic_obstacles):
                 if len(next_dyn_states) > 0:
                     x, y, theta, v, st = next_dyn_states[index]
                     state = self.transform.rotateState([x, y, theta])
                     new_dyn_obst = State(state[0], state[1], state[2], v, st)
                 else:
-                    new_dyn_obst, _, _ = self.vehicle.dynamic(dyn_obst, [self.dyn_acc, self.dyn_ang_acc])
+                    #new_dyn_obst, _, _ = self.vehicle.dynamic(dyn_obst, [self.dyn_acc, self.dyn_ang_acc])
+                    new_dyn_obst, _, _, new_v_s = self.obst_dynamic(dyn_obst, 
+                                                                    [self.dyn_acc, self.dyn_ang_acc], 
+                                                                    v_s,
+                                                                    constant_forward=True)
                 
                 dynamic_obstacles.append(new_dyn_obst)
+                dynamic_obstacles_v_s.append(new_v_s)
             self.dynamic_obstacles = dynamic_obstacles
+            self.dynamic_obstacles_v_s = dynamic_obstacles_v_s
             
             self.dyn_obstacle_segments = []
             for dyn_obst in self.dynamic_obstacles:
                 distance = math.hypot(new_state.x - dyn_obst.x, new_state.y - dyn_obst.y)
                 if distance < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
                     center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-                    self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
+                    width = self.vehicle.width / 2 + 0.3
+                    length = self.vehicle.length / 2 + 0.1
+                    agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+                    self.dyn_obstacle_segments.append(agentBB)
+                    #self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
             
         self.current_state = new_state
         self.last_action = action
@@ -569,19 +636,13 @@ class ObsEnvironment(gym.Env):
 
         if self.hard_constraints:
             goalReached = distanceToGoal < self.HARD_EPS and abs(
-                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS and abs(
-                new_state.v - self.goal.v) < self.SPEED_EPS and abs(normalizeAngle(new_state.steer - self.goal.steer)) < self.STEERING_EPS
-        elif self.soft_constraints:
-            goalReached = distanceToGoal < self.HARD_EPS
-        else:
-            goalReached = distanceToGoal < self.SOFT_EPS and abs(
+                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
+                and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
+        elif self.medium_constraints:
+            goalReached = distanceToGoal < self.MEDIUM_EPS and abs(
                 normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS
-
-        #if not self.hardGoalReached and distanceToGoal < self.SOFT_EPS:
-        #    self.hardGoalReached = True
-        #if self.hardGoalReached:
-        #    if distanceToGoal > self.SOFT_EPS:
-        #        info["SoftEps"] = False
+        elif self.soft_constraints:
+            goalReached = distanceToGoal < self.SOFT_EPS
 
         reward = self.__reward(self.old_state, new_state, goalReached, collision, overSpeeding, overSteering)
 
@@ -590,10 +651,6 @@ class ObsEnvironment(gym.Env):
         
         self.stepCounter += 1
         
-        #DEBUG
-        collision = False
-
-
         if goalReached or collision:
             if self.unionTask:
                 if goalReached:
@@ -601,9 +658,9 @@ class ObsEnvironment(gym.Env):
                     if not self.first_goal_reached:
                         #print("DEBUG")
                         self.first_goal_reached = True
-                        print("first goal was achieved")
                         #self.goal = State(13, -5.5, degToRad(90), 0, 0)
                         self.goal = self.second_goal
+                        self.start_dist = self.__goalDist(new_state)
                         self.task = -1
                         goalReached = False
                         isDone = False
@@ -659,7 +716,11 @@ class ObsEnvironment(gym.Env):
 
         for dyn_obst in self.dynamic_obstacles:
             center_dyn_obst = self.vehicle.shift_state(dyn_obst)
-            agentBB = self.getBB(center_dyn_obst)
+            width = self.vehicle.width / 2 + 0.3
+            length = self.vehicle.length / 2 + 0.1
+            agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
+            #agentBB = self.getBB(center_dyn_obst)
+
             self.drawObstacles(agentBB)
             plt.arrow(dyn_obst.x, dyn_obst.y, 2 * math.cos(dyn_obst.theta), 2 * math.sin(dyn_obst.theta), head_width=0.5, color='magenta')
         
@@ -709,8 +770,8 @@ class ObsEnvironment(gym.Env):
         if save_image:
             fig.canvas.draw()  # draw the canvas, cache the renderer
             image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-            image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            #image = image.reshape(1600, 2000, 3)
+            #image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            image = image.reshape(1600, 2000, 3)
             plt.close('all')
             return image
         else:

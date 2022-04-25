@@ -24,6 +24,9 @@
 #include "modules/canbus/proto/chassis.pb.h"
 #include "modules/localization/proto/localization.pb.h"
 #include "modules/perception/proto/traffic_light_detection.pb.h"
+
+#include "modules/perception/proto/perception_obstacle.pb.h"
+
 #include "modules/planning/common/message_process.h"
 #include "modules/planning/common/planning_gflags.h"
 #include "modules/planning/planning_base.h"
@@ -50,6 +53,13 @@ class PlanningComponent final
 
   static std::vector<std::pair<double, double>> trajectory;
   static bool flag_trajectory;
+  static int last_trajectory_end_index;
+  static int last_trajectory_start_index;
+  static int index_prev_nearest_point;
+  static bool current_traj_polamp_gear;
+
+  static void MessageCallback_obst(
+    const std::shared_ptr<perception::PerceptionObstacles>& msg);
  
   static void MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg);
@@ -80,10 +90,9 @@ class PlanningComponent final
 
   //custom changes:
   std::shared_ptr<cyber::Reader<roi_boundary_message>> trajectory_reader_;
+  std::shared_ptr<cyber::Reader<perception::PerceptionObstacles>> obstacles_reader_;
   std::shared_ptr<cyber::Writer<roi_boundary_message>> roi_boundary_writer_;
   
-  
-
   std::shared_ptr<cyber::Writer<routing::RoutingRequest>> rerouting_writer_;
   std::shared_ptr<cyber::Writer<PlanningLearningData>>
       planning_learning_data_writer_;

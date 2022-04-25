@@ -94,11 +94,25 @@ Status OpenSpaceTrajectoryPartition::Process() {
   auto* interpolated_trajectory_result_ptr =
       open_space_info_ptr->mutable_interpolated_trajectory_result();
 
-  //------------------------------------ДОБАВКА------------------------------------------------------
-  //AERROR << "SIZE stitched in PARTITION SCRIPT: " << stitched_trajectory_result.size();
-  
+  //------------------------------------ДОБАВКА-------------------------------
 
-  //------------------------------------------------------------------------------------------
+  //DEBUG
+  /*
+  AWARN << "partition frame debug: "
+        << frame_->polamp_ready << std::endl;
+  if (frame_->polamp_ready) {
+    AWARN << "partition polamp traj: "
+        << frame_->polamp_trajectory_info.size() << std::endl;
+    for (auto &it : frame_->polamp_trajectory_info) {
+      AWARN << " x: " << it.x 
+            << " y: " << it.y 
+            << " v: " << it.v  
+            << std::endl;
+    }
+  }
+  */
+
+  //-----------------------------------------------------------------------
 
   InterpolateTrajectory(stitched_trajectory_result,
                         interpolated_trajectory_result_ptr);
@@ -128,6 +142,12 @@ Status OpenSpaceTrajectoryPartition::Process() {
         open_space_info_ptr->mutable_stitched_trajectory_result();
     AdjustRelativeTimeAndS(open_space_info.partitioned_trajectories(), 0, 0,
                            mutable_trajectory, chosen_partitioned_trajectory);
+
+    //AWARN << mutable_trajectory->at(index_estimate).path_point().s()
+
+    AWARN << "first status OK"
+          << std::endl;
+          
     return Status::OK();
   }
 
@@ -270,6 +290,10 @@ Status OpenSpaceTrajectoryPartition::Process() {
       trajectory = &(chosen_partitioned_trajectory->first);
       ADEBUG << "After InsertGearShiftTrajectory [" << trajectory->size()
              << "]";
+
+      AWARN << "second status OK"
+          << std::endl;
+
       return Status::OK();
     }
   }
@@ -280,6 +304,10 @@ Status OpenSpaceTrajectoryPartition::Process() {
                          current_trajectory_index,
                          current_trajectory_point_index, mutable_trajectory,
                          chosen_partitioned_trajectory);
+
+  AWARN << "thirth status OK"
+          << std::endl;
+
   return Status::OK();
 }
 
@@ -765,6 +793,24 @@ void OpenSpaceTrajectoryPartition::AdjustRelativeTimeAndS(
   *(current_partitioned_trajectory) =
       partitioned_trajectories.at(current_trajectory_index);
   auto trajectory = &(current_partitioned_trajectory->first);
+
+  //DEBUG
+  /*
+  size_t custom_size = trajectory->size();
+
+  AWARN << "custom partition current_traj: "
+        << custom_size << std::endl;
+
+  for (size_t i = 0; i < custom_size; ++i) { 
+    AWARN << " x: " << trajectory->at(i).path_point().x()
+          << " y: " << trajectory->at(i).path_point().y()
+          << " s: " << trajectory->at(i).path_point().s()
+          << std::endl;
+  } 
+  */
+  //AWARN << "closest_point: "
+  //      << closest_trajectory_point_index
+  //      << std::endl;
   double time_shift =
       trajectory->at(closest_trajectory_point_index).relative_time();
   double s_shift =
@@ -778,6 +824,27 @@ void OpenSpaceTrajectoryPartition::AdjustRelativeTimeAndS(
         trajectory_point->path_point().s() - s_shift);
   }
 
+  //DEBUG
+  /*
+  size_t custom_size_ = trajectory->size();
+  for (size_t i = 0; i < custom_size_; ++i) { 
+    trajectory->at(i).mutable_path_point()->set_s(0);
+  } 
+  */
+
+  //DEBUG
+  /*
+  size_t custom_size = trajectory->size();
+  AWARN << "custom partition current_traj: "
+        << custom_size << std::endl;
+  for (size_t i = 0; i < custom_size; ++i) { 
+    AWARN << " x: " << trajectory->at(i).mutable_path_point()->x()
+          << " y: " << trajectory->at(i).mutable_path_point()->y()
+          << " s: " << trajectory->at(i).mutable_path_point()->s()
+          << std::endl;
+  } 
+  */
+
   // Reassign relative t and s on stitched_trajectory_result for accurate next
   // frame stitching
   const size_t interpolated_pieces_num =
@@ -785,6 +852,7 @@ void OpenSpaceTrajectoryPartition::AdjustRelativeTimeAndS(
   const size_t unpartitioned_trajectory_size =
       unpartitioned_trajectory_result->size();
   size_t index_estimate = 0;
+
   for (size_t i = 0; i < current_trajectory_index; ++i) {
     index_estimate += partitioned_trajectories.at(i).first.size();
   }
@@ -797,14 +865,112 @@ void OpenSpaceTrajectoryPartition::AdjustRelativeTimeAndS(
       unpartitioned_trajectory_result->at(index_estimate).relative_time();
   s_shift =
       unpartitioned_trajectory_result->at(index_estimate).path_point().s();
+
+  //custom changes
+  /*
+  AWARN << "partition frame debug: "
+        << frame_->polamp_ready << std::endl;
+  if (frame_->polamp_ready) {
+    AWARN << "partition polamp traj: "
+        << frame_->polamp_trajectory_info.size() << std::endl;
+    for (auto &it : frame_->polamp_trajectory_info) {
+      AWARN << " x: " << it.x 
+            << " y: " << it.y 
+            << " v: " << it.v  
+            << std::endl;
+    }
+  }
+  */
+  /*
+  std::vector<double> polamp_speeds;
+  std::vector<double> polamp_steers;
+  std::vector<double> polamp_accs;
+  if (frame_->polamp_ready) {
+    for (auto &it : frame_->polamp_trajectory_info) {
+      polamp_speeds.push_back(it.v);
+      polamp_accs.push_back(it.a);
+      polamp_steers.push_back(it.steer);
+    }
+  }
+  
+  //set s to the points and get current trajectory index
+  unsigned index_of_curr_point = 0;
+  bool index_recieved = false;
   for (size_t i = 0; i < unpartitioned_trajectory_size; ++i) {
     TrajectoryPoint* trajectory_point =
         &(unpartitioned_trajectory_result->at(i));
+    trajectory_point->mutable_path_point()->set_s(
+        trajectory_point->path_point().s() - s_shift);
+    if (i < polamp_speeds.size()) {
+      trajectory_point->set_v(polamp_speeds[i]);
+      trajectory_point->set_a(polamp_accs[i]);  
+      trajectory_point->set_steer(polamp_steers[i]); 
+    }
+    trajectory_point->set_relative_time(trajectory_point->relative_time() -
+                                        time_shift);
+    if (trajectory_point->relative_time() == 0 &&
+        !index_recieved) {
+      index_of_curr_point = i;
+      index_recieved = true;
+    }
+  }
+  
+  
+  double current_speed = 2;
+  if (frame_->polamp_ready && 
+      index_of_curr_point < polamp_speeds.size()) {
+    if (polamp_speeds[index_of_curr_point] != 0) {
+      current_speed = polamp_speeds[index_of_curr_point];
+    }
+  }
+  //current_speed *= 0.5;
+  TrajectoryPoint* current_trajectory_point =
+        &(unpartitioned_trajectory_result->at(index_of_curr_point));
+  double current_time = current_trajectory_point->relative_time();
+  //AWARN << "debug: current_index: " << index_of_curr_point << std::endl;
+  //set time for each point
+  for (size_t i = 0; i < unpartitioned_trajectory_size; ++i) {
+    TrajectoryPoint* trajectory_point =
+        &(unpartitioned_trajectory_result->at(i));
+    trajectory_point->set_relative_time(
+            current_time + 
+            trajectory_point->mutable_path_point()->s() / 
+            current_speed);   
+  }
+  */
+  
+
+  //previous version
+  
+  for (size_t i = 0; i < unpartitioned_trajectory_size; ++i) {
+    TrajectoryPoint* trajectory_point =
+        &(unpartitioned_trajectory_result->at(i));
+    
     trajectory_point->set_relative_time(trajectory_point->relative_time() -
                                         time_shift);
     trajectory_point->mutable_path_point()->set_s(
         trajectory_point->path_point().s() - s_shift);
   }
+  
+  /*
+  //DEBUG
+  AWARN << "unpartition trajectory: "
+      << unpartitioned_trajectory_size
+      << std::endl;
+  for (size_t i = 0; i < unpartitioned_trajectory_size; ++i) {
+    TrajectoryPoint* trajectory_point =
+        &(unpartitioned_trajectory_result->at(i));  
+    //trajectory_point->set_relative_time(100);
+    AWARN << " x: " << trajectory_point->mutable_path_point()->x()
+          << " y: " << trajectory_point->mutable_path_point()->y()
+          << " v: " << trajectory_point->v()
+          << " steer: " << trajectory_point->steer()
+          << " s: " << trajectory_point->mutable_path_point()->s()
+          << " t: " << trajectory_point->relative_time()
+          << std::endl;
+  }
+  */
+
 }
 
 }  // namespace planning

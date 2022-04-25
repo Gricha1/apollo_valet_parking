@@ -193,14 +193,49 @@ Status OnLanePlanning::InitFrame(const uint32_t sequence_num,
 //------------------------------------------------------------------------
 void OnLanePlanning::GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
                     std::unique_ptr<apollo::planning::Frame>* frame_) {
-
+  //custom changes:
+  
+  if ((*frame_)->roi_boundary_points.size() == 0) {
+    (*ptr_roi_boundaries_pb)->clear_point();
+    (*ptr_roi_boundaries_pb)->clear_timestamp();
+  }
+  else {
+    for (auto it = (*frame_)->roi_boundary_points.begin(); 
+       it != (*frame_)->roi_boundary_points.end(); it++) {
+         auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
+         roi_point->set_x((*it).x());
+         roi_point->set_y((*it).y());
+         (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
+    }
+  }
+  
+  /*
   for (auto it = (*frame_)->roi_boundary_points.begin(); 
        it != (*frame_)->roi_boundary_points.end(); it++) {
          auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
          roi_point->set_x((*it).x());
          roi_point->set_y((*it).y());
          (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
-       }
+  }
+  */
+  /*
+  for (auto it = (*frame_)->roi_boundary_points.begin(); 
+       it != (*frame_)->roi_boundary_points.end(); it++) {
+         auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
+         roi_point->set_x((*it).x());
+         roi_point->set_y((*it).y());
+         (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
+  }
+  */
+       
+  //DEBUG
+  /*
+  AWARN << "on lane vehicle: " 
+        << " x: " << (*frame_)->open_space_info().origin_point().x()
+        << " y: " << (*frame_)->open_space_info().origin_point().y()
+        << std::endl;
+  */
+
 }
 
   
@@ -269,15 +304,17 @@ void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
 
 
 //custom changes
-void OnLanePlanning::RunOnce(const LocalView& local_view,
-                             ADCTrajectory* const ptr_trajectory_pb,
-              std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
+void OnLanePlanning::RunOnce(
+                const LocalView& local_view,
+                ADCTrajectory* const ptr_trajectory_pb,
+                std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb,
   std::shared_ptr<cyber::Writer<roi_boundary_message>>* roi_boundary_writer_,
-                                                        bool flag_trajectory,
-                        std::vector< std::pair<double, double> >* trajectory,
-                        std::vector<point_info>* polamp_trajectory_info) {
+                bool flag_trajectory,
+                std::vector< std::pair<double, double> >* trajectory,
+                std::vector<point_info>* polamp_trajectory_info
+                ) {
                   
-  
+  AWARN << "RunOnce started" << std::endl;
   // when rerouting, reference line might not be updated. In this case, planning
   // module maintains not-ready until be restarted.
 
@@ -322,11 +359,6 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
 
     return;
   }
-
-  //custom changes
-  //int sss = frame_->roi_boundary_points.size();
-
-
 
   if (start_timestamp - vehicle_state_timestamp <
       FLAGS_message_latency_threshold) {
@@ -379,22 +411,11 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   const uint32_t frame_num = static_cast<uint32_t>(seq_num_++);
 
   status = InitFrame(frame_num, stitching_trajectory.back(), vehicle_state);
-
-  //custom changes (getting roi boundaries and sending to the topic)
-  int sss = frame_->roi_boundary_points.size();
-
-  //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
   
-  //(*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
-
-  //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-  //custom changes (getting trajectory)
-
-
-
-
-
-
+  //custom changes: UPDATED
+  //if (flag_trajectory) {
+  //  status = Status::OK();
+  //}
 
   if (status.ok()) {
     injector_->ego_info()->CalculateFrontObstacleClearDistance(
@@ -473,9 +494,12 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
       frame_->polamp_trajectory_info.push_back(temp_point);
     }
   }
-  
 
   status = Plan(start_timestamp, stitching_trajectory, ptr_trajectory_pb);
+  //custom changes UPDATED
+  //if (flag_trajectory) { 
+  //  status = Status::OK();
+  //}
   GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
  
 
@@ -537,12 +561,7 @@ void OnLanePlanning::RunOnce(const LocalView& local_view,
   }
 
   //custom changes
-  //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
-  
   (*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
-
-  //custom changes
-  AWARN << sss << std::endl;
 
   const uint32_t n = frame_->SequenceNum();
   injector_->frame_history()->Add(n, std::move(frame_));

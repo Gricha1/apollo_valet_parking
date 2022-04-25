@@ -2059,46 +2059,6 @@ node {
   road_id: "7"
 }
 node {
-  lane_id: "7_0_-1"
-  length: 130.73230196927142
-  cost: 25.317249295585636
-  central_curve {
-    segment {
-      line_segment {
-        point {
-          x: 388930.98204621568
-          y: 221208.00096006872
-          z: 0.195343017578125
-        }
-        point {
-          x: 388949.4282468395
-          y: 221207.98971737133
-          z: 0.195343017578125
-        }
-        point {
-          x: 388998.77774992009
-          y: 221207.95963955278
-          z: 0.195343017578125
-        }
-        point {
-          x: 389061.6819713689
-          y: 221207.92130033261
-          z: 0.195343017578125
-        }
-      }
-      s: 0
-      start_position {
-        x: 388930.98204621568
-        y: 221208.00096006872
-        z: 0.195343017578125
-      }
-      length: 130.73230196927142
-    }
-  }
-  is_virtual: false
-  road_id: "7"
-}
-node {
   lane_id: "8_0_-3"
   length: 8.4639319022567054
   cost: 2.0733172522336583
@@ -8765,6 +8725,46 @@ node {
   is_virtual: false
   road_id: "104"
 }
+node {
+  lane_id: "7_0_-1"
+  length: 130.73230196927142
+  cost: 25.317249295585636
+  central_curve {
+    segment {
+      line_segment {
+        point {
+          x: 388930.98204621568
+          y: 221208.00096006872
+          z: 0.195343017578125
+        }
+        point {
+          x: 388949.4282468395
+          y: 221207.98971737133
+          z: 0.195343017578125
+        }
+        point {
+          x: 388998.77774992009
+          y: 221207.95963955278
+          z: 0.195343017578125
+        }
+        point {
+          x: 389061.6819713689
+          y: 221207.92130033261
+          z: 0.195343017578125
+        }
+      }
+      s: 0
+      start_position {
+        x: 388930.98204621568
+        y: 221208.00096006872
+        z: 0.195343017578125
+      }
+      length: 130.73230196927142
+    }
+  }
+  is_virtual: false
+  road_id: "7"
+}
 edge {
   from_lane_id: "0_0_-1"
   to_lane_id: "18_0_-1"
@@ -9086,12 +9086,6 @@ edge {
 edge {
   from_lane_id: "7_0_1"
   to_lane_id: "58_0_1"
-  cost: 0
-  direction_type: FORWARD
-}
-edge {
-  from_lane_id: "7_0_-1"
-  to_lane_id: "104_0_-1"
   cost: 0
   direction_type: FORWARD
 }
@@ -9464,6 +9458,12 @@ edge {
 edge {
   from_lane_id: "104_0_-1"
   to_lane_id: "9_0_-3"
+  cost: 0
+  direction_type: FORWARD
+}
+edge {
+  from_lane_id: "7_0_-1"
+  to_lane_id: "104_0_-1"
   cost: 0
   direction_type: FORWARD
 }

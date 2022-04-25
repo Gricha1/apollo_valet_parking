@@ -111,145 +111,30 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
   HybridAStartResult result;
   std::vector<point_info> polamp_trajectory;
   std::vector<std::pair<double, double>> traj_to_vector = {};
-
   
-  //custom changes
-  if (frame->polamp_ready) {
+  bool debug_a_star = false;
 
-    //transfer trajectory to the new variable (frame problem)
-    AWARN << "new polap info: " << std::endl;
-    for (auto &it : frame->polamp_trajectory_info) {
-      //AWARN << it.x << " " << it.y << " " << it.phi  
-      //      << std::endl;
-      point_info temp_point;
-      temp_point.x = it.x;
-      temp_point.y = it.y;
-      temp_point.phi = it.phi;
-      temp_point.v = it.v;
-      temp_point.a = it.a;
-      temp_point.steer = it.steer;  
-      polamp_trajectory.push_back(temp_point);
-    }
-    AWARN << "---------------------"
-          << std::endl;
-
-    //create trajectory
-    std::vector<double> points_x;
-    std::vector<double> points_y;
-    std::vector<double> points_phi;
-    std::vector<double> points_v;
-    std::vector<double> points_a;
-    std::vector<double> points_steer;
-    std::vector<double> points_accumulated_s;
-
-    for (auto &it : polamp_trajectory) {
-        points_x.push_back(it.x);
-        points_y.push_back(it.y);
-        points_phi.push_back(it.phi);
-        points_v.push_back(it.v);
-        points_a.push_back(it.a);
-        points_steer.push_back(it.steer);
-    }
-
-
-    if ((abs( (polamp_trajectory.begin())->x - init_x ) < 0.5) &&
-        (abs( (polamp_trajectory.begin())->y - init_y ) < 0.5)) {
-        init_x = points_x[points_x.size() - 1];
-        init_y = points_y[points_y.size() - 1];
-        init_phi = points_phi[points_phi.size() - 1];
-        //DEBUG
-        AWARN << "first generation of traj";
-        AWARN << "warm_star plan starts init point: "
-            << init_x << " "
-            << init_y << " "
+  if (!debug_a_star) {
+    //custom changes
+    if (frame->polamp_ready) {
+      /*
+      //transfer trajectory to the new variable (frame problem)
+      AWARN << "new polap info: " << std::endl;
+      for (auto &it : frame->polamp_trajectory_info) {
+        //AWARN << it.x << " " << it.y << " " << it.phi  
+        //      << std::endl;
+        point_info temp_point;
+        temp_point.x = it.x;
+        temp_point.y = it.y;
+        temp_point.phi = it.phi;
+        temp_point.v = it.v;
+        temp_point.a = it.a;
+        temp_point.steer = it.steer;  
+        polamp_trajectory.push_back(temp_point);
+      }
+      AWARN << "---------------------"
             << std::endl;
 
-        warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
-                          end_pose[2], XYbounds, obstacles_vertices_vec,
-                          &result);
-
-        AWARN << "warm_star plan done"
-            << std::endl;
-
-        //Save A* result
-        HybridAStartResult result_a_star = result;
-
-        //Initialization with POLAMP trajectory
-        points_x.pop_back();
-        points_y.pop_back();
-        points_phi.pop_back();
-        points_steer.pop_back();
-
-        result.x = points_x;
-        result.y = points_y;
-        result.phi = points_phi;
-        result.steer = points_steer;
-
-        //Adding A* trajectory
-        for (unsigned i = 0; i < result_a_star.x.size(); i++) {
-          result.x.push_back(result_a_star.x[i]);
-          result.y.push_back(result_a_star.y[i]);
-          result.phi.push_back(result_a_star.phi[i]);
-          result.steer.push_back(result_a_star.steer[i]);
-          //<< result_a_star.accumulated_s[i]
-        }
-
-    }
-    else {
-      //DEBUG
-      AWARN << "warm_star plan starts init point: "
-          << init_x << " "
-          << init_y << " "
-          << std::endl;
-
-      warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
-                        end_pose[2], XYbounds, obstacles_vertices_vec,
-                        &result);
-
-      AWARN << "warm_star plan done"
-          << std::endl;
-    }
-
-    //DEBUG
-    //AWARN << "warm_star plan starts init point: "
-    //      << init_x << " "
-    //      << init_y << " "
-    //      << std::endl;
-
-    //warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
-    //                    end_pose[2], XYbounds, obstacles_vertices_vec,
-    //                    &result);
-
-    //AWARN << "warm_star plan done"
-    //      << std::endl;
-    
-    /*
-    //DEBUG
-    double max_v = -10;
-    double max_a = -10;  
-    for (auto &it : polamp_trajectory) {
-      if (abs(it.v) > max_v) {
-        max_v = it.v;
-      } 
-      if (abs(it.a) > max_a) {
-        max_a = it.a;
-      } 
-    }
-    //max_v = 0.5  max_a = 1
-    double new_max_v = 0.5;
-    double new_max_a = 1;
-    for (auto &it : polamp_trajectory) {
-      it.v = it.v / max_v;
-      it.a = it.a / max_a;
-      it.v = it.v * new_max_v;
-      it.a = it.a * new_max_a;
-    }
-    */
-    
-    //check if we need to change on the polamp trajectory
-    /*
-    if ((abs( (polamp_trajectory.begin())->x - init_x ) < 0.5) &&
-        (abs( (polamp_trajectory.begin())->y - init_y ) < 0.5)) {
       //create trajectory
       std::vector<double> points_x;
       std::vector<double> points_y;
@@ -268,112 +153,121 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
           points_steer.push_back(it.steer);
       }
 
-      result.x = points_x;
-      result.y = points_y;
-      result.phi = points_phi;
-      //result.v = points_v;
-      //result.a = points_a;
-      result.steer = points_steer;
-      
-    }
-    */
-    
-    
 
-    /*
-    //create trajectory
-    std::vector<double> points_x;
-    std::vector<double> points_y;
-    std::vector<double> points_phi;
-    std::vector<double> points_v;
-    std::vector<double> points_a;
-    std::vector<double> points_steer;
-    std::vector<double> points_accumulated_s;
+      if ((abs( (polamp_trajectory.begin())->x - init_x ) < 0.5) &&
+          (abs( (polamp_trajectory.begin())->y - init_y ) < 0.5)) {
+          init_x = points_x[points_x.size() - 1];
+          init_y = points_y[points_y.size() - 1];
+          init_phi = points_phi[points_phi.size() - 1];
+          //DEBUG
+          AWARN << "first generation of traj";
+          AWARN << "warm_star plan starts init point: "
+              << init_x << " "
+              << init_y << " "
+              << std::endl;
 
-    for (auto &it : polamp_trajectory) {
-        points_x.push_back(it.x);
-        points_y.push_back(it.y);
-        points_phi.push_back(it.phi);
-        points_v.push_back(it.v);
-        points_a.push_back(it.a);
-        points_steer.push_back(it.steer);
-    }
+          //warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
+          //                  end_pose[2], XYbounds, obstacles_vertices_vec,
+          //                  &result);
+          if (!warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
+                          end_pose[2], XYbounds, obstacles_vertices_vec,
+                          &result)) {
+            return Status(ErrorCode::PLANNING_ERROR,
+                          "State warm start problem failed to solve");
+          }
 
-    result.x = points_x;
-    result.y = points_y;
-    result.phi = points_phi;
-    result.v = points_v;
-    result.a = points_a;
-    result.steer = points_steer;
-    */
+          AWARN << "warm_star plan done"
+              << std::endl;
 
-    /*
-    //DEBUG
-    AWARN << "starts are equal: "
-          << (abs( (polamp_trajectory.begin())->x - result.x[0] ) < 0.5) 
-          << " "
-          << (abs( (polamp_trajectory.begin())->y - result.y[0] ) < 0.5)
-          << std::endl;
+          //Save A* result
+          HybridAStartResult result_a_star = result;
 
-    //check if we need to change on the polamp trajectory
-    unsigned i = 0;
-    if ((abs( (polamp_trajectory.begin())->x - result.x[0] ) < 0.5) &&
-        (abs( (polamp_trajectory.begin())->y - result.y[0] ) < 0.5)) {
-      for (auto &it : polamp_trajectory) {
-        result.x[i] = it.x;
-        result.y[i] = it.y;
-        result.v[i] = it.v;
-        result.a[i] = it.a;
-        result.steer[i] = it.steer;
-        
-        i++;
-        if (i >= (result.x).size()) break;
+          //Initialization with POLAMP trajectory
+          points_x.pop_back();
+          points_y.pop_back();
+          points_phi.pop_back();
+          points_v.pop_back();
+          points_a.pop_back();
+          points_steer.pop_back();
+
+          result.x = points_x;
+          result.y = points_y;
+          result.phi = points_phi;
+          result.v = points_v;
+          result.a = points_a;
+          result.steer = points_steer;
+          
+          //Adding A* trajectory
+          for (unsigned i = 0; i < result_a_star.x.size(); i++) {
+            result.x.push_back(result_a_star.x[i]);
+            result.y.push_back(result_a_star.y[i]);
+            result.phi.push_back(result_a_star.phi[i]);
+            result.steer.push_back(result_a_star.steer[i]);
+            //<< result_a_star.accumulated_s[i]
+          }
+          
+          
       }
-    }
-    */
+      else {
+        //generate A* if not in start point
+        //DEBUG
+        AWARN << "warm_star plan starts init point: "
+            << init_x << " "
+            << init_y << " "
+            << std::endl;
 
-    
-    //DEBUG
-    AWARN << "hybrid trajectory: "
-          << result.x.size() << " " <<  result.y.size()
-          << std::endl; 
-    //DEBUG
-    for (unsigned i = 0; i < result.x.size(); i++) {
-      if (i == points_x.size()) {
-        AWARN << "transition on A*"
+        if (!warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
+                          end_pose[2], XYbounds, obstacles_vertices_vec,
+                          &result)) {
+            return Status(ErrorCode::PLANNING_ERROR,
+                          "State warm start problem failed to solve");
+        }
+
+        AWARN << "warm_star plan done"
+            << std::endl;
+      }
+      
+      //DEBUG
+      AWARN << "hybrid trajectory: "
+            << result.x.size() << " " <<  result.y.size()
+            << std::endl; 
+      //DEBUG
+      for (unsigned i = 0; i < result.x.size(); i++) {
+        if (i == points_x.size()) {
+          AWARN << "transition on A*"
+                << std::endl;
+        }
+        AWARN << "x: " << result.x[i] << " "
+              << "y: " << result.y[i] << " "
+              << "phi: " << result.phi[i] << " "
+              << "steer: " << result.steer[i] << " "
+              //<< result.accumulated_s[i]
               << std::endl;
       }
-      AWARN << "x: " << result.x[i] << " "
-            << "y: " << result.y[i] << " "
-            << "phi: " << result.phi[i] << " "
-            << "steer: " << result.steer[i] << " "
-            //<< result.accumulated_s[i]
-            << std::endl;
+      AWARN << "---------------------";
+      */
+      if (!warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
+                            end_pose[2], XYbounds, obstacles_vertices_vec,
+                            &result)) {
+              return Status(ErrorCode::PLANNING_ERROR,
+                            "State warm start problem failed to solve");
+      }
     }
-    AWARN << "---------------------";
-    
-
-    
-  
+    else {
+      return Status(ErrorCode::PLANNING_ERROR,
+                    "State warm start problem failed to solve");
+    }
   }
   else {
-    return Status(ErrorCode::PLANNING_ERROR,
-                  "State warm start problem failed to solve");
-  }
-  
+    //previouse version  
+    if (!warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
+                          end_pose[2], XYbounds, obstacles_vertices_vec,
+                          &result)) {
 
-  /*
-  //previouse version
-  if (!warm_start_->Plan(init_x, init_y, init_phi, end_pose[0], end_pose[1],
-                        end_pose[2], XYbounds, obstacles_vertices_vec,
-                        &result)) {
-                          
-    //AWARN << "CODE ERROR"; //DEBUG
-
-    return Status(ErrorCode::PLANNING_ERROR,
-                  "State warm start problem failed to solve");
+      return Status(ErrorCode::PLANNING_ERROR,
+                    "State warm start problem failed to solve");
+    }
   }
-  */
 
   // Containers for distance approach trajectory smoothing problem
   Eigen::MatrixXd xWS;
@@ -386,12 +280,16 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
   Eigen::MatrixXd dual_l_result_ds;
   Eigen::MatrixXd dual_n_result_ds;
 
-
+  //DEBUG
+  FLAGS_enable_parallel_trajectory_smoothing = true;
+  
   if (FLAGS_enable_parallel_trajectory_smoothing) {
     std::vector<HybridAStartResult> partition_trajectories;
     if (!warm_start_->TrajectoryPartition(result, &partition_trajectories)) {
       return Status(ErrorCode::PLANNING_ERROR, "Hybrid Astar partition failed");
     }
+
+    AWARN << "first flag = true" << std::endl;
 
     
     //DEBUG
@@ -403,12 +301,12 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
     */
 
     //DEBUG
-    unsigned index = 0;
+    //unsigned index = 0;
     AWARN << "partitioned trajectories: "
           << partition_trajectories.size()
           << std::endl;
 
-    if (frame->polamp_ready) {
+    if (true) {
       //create trajectory
       std::vector<double> points_x;
       std::vector<double> points_y;
@@ -426,37 +324,41 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
           points_a.push_back(it.a);
           points_steer.push_back(it.steer);
       }
-
       for (auto& result : partition_trajectories) {
+        AWARN << "next part MAIS: "
+              << result.x.size() << " "
+              << result.v.size()
+              <<std::endl;
+        
+        for (unsigned i = 0; i < result.x.size(); i++) {
+          //result.v[i] = 0;
+          //result.a[i] = 0;
+          //if (index < points_v.size()) {
+            //result.v[i] = points_v[index];
+            //result.a[i] = points_a[index];
+            //result.v[i] = 0;
+            //result.a[i] = 0;
+            //index++;
+          //}
+          
+        //}
+        }
+      }
+    }
+
+    //DEBUG
+    for (auto& result : partition_trajectories) {
         AWARN << "next part: "
               << result.x.size() << " "
               << result.v.size()
               <<std::endl;
         
         for (unsigned i = 0; i < result.x.size(); i++) {
-          /*
-          AWARN << result.x[i] << " "
-                << result.y[i] << " "
-                //<< result.phi[i] << " "
-                << result.v[i] << " "
-                << result.a[i] << " "
-                //<< result.steer[i] << " "
-                //<< result.accumulated_s[i]
-                << std::endl;
-          */
-          
-          if (index < points_v.size()) {
-            result.v[i] = points_v[index];
-            result.a[i] = points_a[index];
-            //result.v[i] = 0;
-            //result.a[i] = 0;
-            index++;
-          }
-          
+          AWARN << "v: " << result.v[i] << " "
+                << "a: " << result.a[i] << std::endl;
         }
         AWARN << "---------------------";
       }
-    }
 
     /*
     AWARN << "hybrid trajectory: "
@@ -549,6 +451,9 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
       FLAGS_use_iterative_anchoring_smoother = false;
 
       if (FLAGS_use_iterative_anchoring_smoother) {
+
+        AWARN << "second flag = true" << std::endl;
+
         if (!GenerateDecoupledTraj(
                 xWS_vec[i], last_time_u(1, 0), init_v, obstacles_vertices_vec,
                 &state_result_ds_vec[i], &control_result_ds_vec[i],
@@ -568,6 +473,10 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
               "iterative anchoring smoothing problem failed to solve");
         }
       } else {
+
+        AWARN << "second flag = false" << std::endl;
+
+
         const double start_system_timestamp =
             std::chrono::duration<double>(
                 std::chrono::system_clock::now().time_since_epoch())
@@ -613,6 +522,12 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
       ADEBUG << "Open space trajectory smoothing total time: "
              << smoother_diff.count() * 1000.0 << " ms at the " << i
              << "th trajectory.";
+      //DEBUG
+      AWARN << "The " << i << "th trajectory pre-smoothing size is "
+             << xWS_vec[i].cols() << "; post-smoothing size is "
+             << state_result_ds_vec[i].cols();
+      
+
       ADEBUG << "The " << i << "th trajectory pre-smoothing size is "
              << xWS_vec[i].cols() << "; post-smoothing size is "
              << state_result_ds_vec[i].cols();
@@ -642,9 +557,9 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
                         &n_warm_up, &dual_l_result_ds, &dual_n_result_ds);
 
   } else {
-    LoadHybridAstarResultInEigen(&result, &xWS, &uWS);
+    AWARN << "first flag = false" << std::endl;
 
-    AWARN << "TrajectoryPart false";
+    LoadHybridAstarResultInEigen(&result, &xWS, &uWS);
 
     const double init_steer = trajectory_stitching_point.steer();
     const double init_a = trajectory_stitching_point.a();
@@ -895,15 +810,25 @@ void OpenSpaceTrajectoryOptimizer::LoadTrajectory(
   double relative_time = 0.0;
   double relative_s = 0.0;
   Vec2d last_path_point(state_result(0, 0), state_result(1, 0));
+
+  //DEBUG
+  AWARN << "loaded trajectory: "
+        << states_size << std::endl;
+        
   for (size_t i = 0; i < states_size; ++i) {
+
     common::TrajectoryPoint point;
     point.mutable_path_point()->set_x(state_result(0, i));
     point.mutable_path_point()->set_y(state_result(1, i));
     point.mutable_path_point()->set_theta(state_result(2, i));
     point.set_v(state_result(3, i));
     Vec2d cur_path_point(state_result(0, i), state_result(1, i));
+
     relative_s += cur_path_point.DistanceTo(last_path_point);
+
     point.mutable_path_point()->set_s(relative_s);
+
+
     // TODO(Jinyun): Evaluate how to set end states control input
     if (i == controls_size) {
       point.set_steer(0.0);
@@ -915,10 +840,34 @@ void OpenSpaceTrajectoryOptimizer::LoadTrajectory(
 
     if (i == 0) {
       point.set_relative_time(relative_time);
+
+      //DEBUG
+      AWARN << "i: " << i 
+      << " x: " << state_result(0, i)
+      << " y: " << state_result(1, i)
+      << " theta: " << state_result(2, i)
+      << " v: " << state_result(3, i)
+      << " acc_s: " << relative_s
+      << " t: " << 0
+      << std::endl;
+
     } else {
       relative_time += time_result(0, i - 1);
       point.set_relative_time(relative_time);
+
+
+      //DEBUG
+      AWARN << "i: " << i 
+      << " x: " << state_result(0, i)
+      << " y: " << state_result(1, i)
+      << " theta: " << state_result(2, i)
+      << " v: " << state_result(3, i)
+      << " acc_s: " << relative_s
+      << " t: " << time_result(0, i - 1)
+      << std::endl;
     }
+
+
 
     optimized_trajectory_.emplace_back(point);
     last_path_point = cur_path_point;
@@ -981,6 +930,13 @@ bool OpenSpaceTrajectoryOptimizer::GenerateDistanceApproachTraj(
   Eigen::MatrixXd s_warm_up = Eigen::MatrixXd::Zero(obstacles_num, horizon + 1);
 
   // Dual variable warm start for distance approach problem
+  //DEBUG
+  FLAGS_use_dual_variable_warm_start = false;
+  AWARN << "inside first part: use_dual " 
+        << FLAGS_use_dual_variable_warm_start
+        << std::endl;
+
+  
   if (FLAGS_use_dual_variable_warm_start) {
     if (dual_variable_warm_start_->Solve(
             horizon, ts, ego, obstacles_num, obstacles_edges_num, obstacles_A,
@@ -997,6 +953,8 @@ bool OpenSpaceTrajectoryOptimizer::GenerateDistanceApproachTraj(
   }
 
   // Distance approach trajectory smoothing
+  /*
+  AWARN << "use distance approuch true" << std::endl;
   if (distance_approach_->Solve(
           x0, xF, last_time_u, horizon, ts, ego, xWS, uWS, *l_warm_up,
           *n_warm_up, s_warm_up, XYbounds, obstacles_num, obstacles_edges_num,
@@ -1013,6 +971,16 @@ bool OpenSpaceTrajectoryOptimizer::GenerateDistanceApproachTraj(
       return false;
     }
   }
+  */
+  
+
+  //DEBUG
+  
+  AWARN << "use A* as result true" << std::endl;
+  UseWarmStartAsResult(xWS, uWS, *l_warm_up, *n_warm_up, state_result_ds,
+                           control_result_ds, time_result_ds, dual_l_result_ds,
+                           dual_n_result_ds);
+  
   return true;
 }
 

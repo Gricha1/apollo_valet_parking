@@ -181,7 +181,7 @@ function main() {
             env ${APOLLO_ENV} bash "${build_sh}" --config=cpu "$@"
             ;;
         build_gpu)
-            env ${APOLLO_ENV} bash "${build_sh}" --config=gpu "$@"
+            env ${APOLLO_ENV} bash "${build_sh}" --config=gpu --config=dbg "$@"
             ;;
         build_opt_gpu)
             env ${APOLLO_ENV} bash "${build_sh}" --config=opt --config=gpu "$@"

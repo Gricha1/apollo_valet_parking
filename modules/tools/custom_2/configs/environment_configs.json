@@ -14,7 +14,7 @@
     "UPDATE_SPARSE": 8,
     "HARD_EPS": 0.5,
     "SOFT_EPS": 0.5,
-    "ANGLE_EPS": 8,
+    "ANGLE_EPS": 15,
     "SPEED_EPS": 6,
     "STEERING_EPS": 20,
     "view_angle": 180,

@@ -202,12 +202,24 @@ Status ControlComponent::ProduceControlCommand(
     estop_reason_ += local_view_.trajectory().estop().reason();
   }
 
+  //DEBUG
+  AWARN << "controm_component: "
+        << local_view_.trajectory().trajectory_point_size()
+        << std::endl;
+
   if (local_view_.trajectory().trajectory_point().empty()) {
     AWARN_EVERY(100) << "planning has no trajectory point. ";
     estop_ = true;
+
+
+    //delete !!!
+    //estop_ = false;
+
+    
     estop_reason_ = "estop for empty planning trajectory, planning headers: " +
                     local_view_.trajectory().header().ShortDebugString();
   }
+
 
   if (FLAGS_enable_gear_drive_negative_speed_protection) {
     const double kEpsilon = 0.001;
@@ -279,6 +291,10 @@ Status ControlComponent::ProduceControlCommand(
 bool ControlComponent::Proc() {
   const auto start_time = Clock::Now();
 
+  //DEBUG
+  AWARN << "control starts: "
+        << std::endl;
+
   chassis_reader_->Observe();
   const auto &chassis_msg = chassis_reader_->GetLatestObserved();
   if (chassis_msg == nullptr) {
@@ -294,6 +310,13 @@ bool ControlComponent::Proc() {
     AERROR << "planning msg is not ready!";
     return false;
   }
+
+  //DEBUG
+  //AINFO << "control trajectory polamp: "
+  //      << trajectory_msg->trajectory_point_size()
+  //      << std::endl;
+  //trajectory_msg->clear_trajectory_point();
+
   OnPlanning(trajectory_msg);
 
   localization_reader_->Observe();
@@ -422,6 +445,9 @@ Status ControlComponent::CheckInput(LocalView *local_view) {
          << local_view->localization().ShortDebugString();
   ADEBUG << "Received chassis:" << local_view->chassis().ShortDebugString();
 
+
+  //previous version (TESTING)
+  
   if (!local_view->trajectory().estop().is_estop() &&
       local_view->trajectory().trajectory_point().empty()) {
     AWARN_EVERY(100) << "planning has no trajectory point. ";
@@ -430,6 +456,10 @@ Status ControlComponent::CheckInput(LocalView *local_view) {
                      local_view->trajectory().header().sequence_num());
     return Status(ErrorCode::CONTROL_COMPUTE_ERROR, msg);
   }
+  
+
+
+
 
   for (auto &trajectory_point :
        *local_view->mutable_trajectory()->mutable_trajectory_point()) {

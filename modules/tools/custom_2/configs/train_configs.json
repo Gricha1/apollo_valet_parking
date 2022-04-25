@@ -5,10 +5,10 @@
     "lambda": 0.96,
     "use_critic": 1,
     "use_gae": 1,
-    "horizon": 600,
+    "horizon": 300,
     "rollout_fragment_length": 1600,
     "num_gpus": 1,
-    "num_workers": 5,
+    "num_workers": 10,
     "lr": 0.0001,
     "sgd_minibatch_size": 512,
     "num_sgd_iter": 10,
@@ -30,5 +30,13 @@
     "vf_loss_coeff": 0.1,
     "use_lstm": 0,
     "lstm_use_prev_action": 0,
-    "free_log_std": 1
+    "free_log_std": 1,
+    "run_num": 27,
+    "ex_num": 2,
+    "conf_num": 1,
+    "loaded_run_num": 26,
+    "loaded_ex_num": 2,
+    "loaded_conf_num": 1,
+    "loaded_check_num": 6870,
+    "no_initial_weights": 0
 }

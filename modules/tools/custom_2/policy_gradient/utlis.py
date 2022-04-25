@@ -49,7 +49,7 @@ def validate_task(env, agent, max_steps=800, idx=None, save_image=False, val_key
 
         #get trajectory data for Apollo
         states.append(env.current_state)
-        accs.append(env.vehicle.a)
+        #accs.append(env.vehicle.a)
         if t != 0: #update t - 1
             Dx = states[t].x - states[t - 1].x
             Dy = states[t].y - states[t - 1].y
@@ -63,6 +63,20 @@ def validate_task(env, agent, max_steps=800, idx=None, save_image=False, val_key
         else:
             action = agent.compute_single_action(observation)
 
+        #clip and append action
+        a = action[0]
+        if env.vehicle.use_clip:
+            a = np.clip(a, -env.vehicle.max_acc, env.vehicle.max_acc)
+        if env.vehicle.is_jerk:
+            if abs(a - env.vehicle.a) > env.vehicle.jerk:
+                if a > env.vehicle.a:
+                    a = env.vehicle.a + abs(a - env.vehicle.a)
+                else:
+                    a = env.vehicle.a - abs(a - env.vehicle.a)
+        accs.append(a)
+        #accs.append(env.vehicle.a)
+        #accs.append(action[0])
+            
         #debug time
         end_time_action = time.time()
         times_action.append(end_time_action - start_time_action)

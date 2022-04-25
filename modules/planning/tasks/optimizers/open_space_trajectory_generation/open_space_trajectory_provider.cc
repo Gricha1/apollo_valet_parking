@@ -435,7 +435,22 @@ void OpenSpaceTrajectoryProvider::LoadResult(
       stitching_trajectory_ptr->back().relative_time();
   double stitching_point_relative_s =
       stitching_trajectory_ptr->back().path_point().s();
+
+  //DEBUG
+  AWARN << "provider trajectory result: "
+        << optimizer_trajectory_size << std::endl;
+
   for (size_t i = 0; i < optimizer_trajectory_size; ++i) {
+    //DEBUG
+    /*
+    AWARN << "x: " << optimizer_trajectory_ptr->at(i).path_point().x()
+          << "y: " << optimizer_trajectory_ptr->at(i).path_point().y()
+          << "s: " << optimizer_trajectory_ptr->at(i).path_point().s()
+          << std::endl;
+    */
+   //optimizer_trajectory_ptr->at(i).mutable_path_point()->set_x(0);
+   //optimizer_trajectory_ptr->at(i).mutable_path_point()->set_y(0);
+
     optimizer_trajectory_ptr->at(i).set_relative_time(
         optimizer_trajectory_ptr->at(i).relative_time() +
         stitching_point_relative_time);

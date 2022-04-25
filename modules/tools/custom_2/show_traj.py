@@ -71,9 +71,16 @@ def get_coordinates(list_points):
     x = list_points[: len(list_points) // 2] \
     + [float(adding_point[:18])]
   except:
+    print("DEBUG")
+    print(adding_point[:4])
+    #x = list_points[: len(list_points) // 2] \
+    #+ [float(adding_point[:17])]
     x = list_points[: len(list_points) // 2] \
-    + [float(adding_point[:17])]
-  y = [float(adding_point[18:])] \
+    + [float(adding_point[:4])]
+    
+  #y = [float(adding_point[18:])] \
+  #+ list_points[len(list_points) // 2 :]
+  y = [float(adding_point[:4])] \
   + list_points[len(list_points) // 2 :]
 
   return x, y
@@ -123,16 +130,14 @@ car_current_y = [p[1] for p in car_current_coordinates]
 #car_current_end = [p[0] for p in car_current_coordinates]
 #car_current_end = [p[1] for p in car_current_coordinates]
 
-
-
 plt.plot(car_current_x, car_current_y)
 plt.plot(x_points_traj, y_points_traj)
 
 x_points_obst.pop(0)
 y_points_obst.pop(0)
 plt.plot(x_points_obst, y_points_obst)
-plt.plot(x_points_park, y_points_park)
-plt.scatter(x_goals[0], y_goals[0], c='red')
+#plt.plot(x_points_park, y_points_park)
+#plt.scatter(x_goals[0], y_goals[0], c='red')
 plt.scatter(x_goals[1], y_goals[1], c='red')
 plt.scatter(x_points_traj[-1], y_points_traj[-1], c='green')
 

@@ -20,6 +20,47 @@ parser.add_argument('-s', '--max_steps', type=int,
 args = parser.parse_args()
 
 
+def save_trajectory(SAVE_DIR, file_number, 
+			trajectory, info_, roi_boundaries, parking_space):
+	"""
+	save trajectory in SAVE_DIR/ with file_number
+	SAVE_DIR: str
+	file_number: int
+	trajectory - 
+		trajectory[0] - trajectory: point
+		trajectory[1] - _
+		trajectory[2] - machine config: 
+
+	"""
+				
+	with open(SAVE_DIR + f"machine_config_{file_number}.txt", 'w') as f:
+		f.write(str(trajectory[2][-1]) + " " \
+			+ str(info_["car_length"]) + " " \
+			+ str(info_["car_width"]) + " " \
+			+ str(info_["wheel_base"]))
+
+	with open(SAVE_DIR + f"goals_{file_number}.txt", 'w') as f:
+		f.write(str(info_["first_goal"][0]) + " " \
+			+ str(info_["second_goal"][0]))
+		f.write(str(info_["first_goal"][1]) + " " \
+			+ str(info_["second_goal"][1]))
+
+	with open(SAVE_DIR + f"result_points_{file_number}.txt", 'w') as f:
+		f.write(" ".join([str(state.x) for state in trajectory[0]]))
+		f.write(" ".join([str(state.y) for state in trajectory[0]]))
+
+	with open(SAVE_DIR + f"result_roi_boundaries_{file_number}.txt", 'w') as f:
+		f.write(" ".join([str(state.x) for state in roi_boundaries]))
+		f.write(" ".join([str(state.y) for state in roi_boundaries]))
+	
+	with open(SAVE_DIR + f"parking_space_{file_number}.txt", 'w') as f:
+		f.write(" ".join([str(state.x) for state in parking_space]))
+		f.write(" ".join([str(state.y) for state in parking_space]))
+
+	print("trajectory is saved")
+	print()
+
+
 
 class point:
 
@@ -99,27 +140,12 @@ class ApolloFeatures:
 class RoiWriter:
 
     def __init__(self):
-
         cyber.init()
         self.node = cyber.Node("roi_writer")
-
         self.trajectory_writer = self.node.create_writer('from_python_to_apollo', 
 														roi_boundary_message)
-
-'''
-	def send_trajectory(self, trajectory):
-        msg = RoutingRequest()
-        msg.header.module_name = 'dreamview'
-        msg.header.sequence_num = 0
-
-		for state in trajectory:
-			waypoint = msg.waypoint.add()
-			waypoint.pose.x = float(state.x)
-			waypoint.pose.y = float(state.y)
-
-        self.trajectory_writer.write(msg)
-'''
-
+        #self.helper_svl_writer = self.node.create_writer('polamp_trajectory_ready_topic', 
+		#												roi_boundary_message)
 
 class RoiReader:
 
@@ -129,62 +155,51 @@ class RoiReader:
 		self.reader = self.node.create_reader('get_roi_boundaries_topic', 
 										roi_boundary_message, self.callback)
 		self.j = 0
-
 		self.polamp_trajectory_writer = polamp_trajectory_writer
+		self.missed_count = 0
 
 
 	def callback(self, data):
 		"""
 			Reader message callback.
 		"""
-		#print("data recieved")
+		if self.missed_count < 10:
+			print("debug test python, miss count:", self.missed_count)
+			self.missed_count = self.missed_count + 1
+			return
+			
 		data = list(data.point)
-
+		obsts = data[:-12]
+		data = data[-12:]
+		#obsts = data[12:]
+		#data = data[:12]
 		#delete copies
 		data.pop(2)
 		data.pop(3)
-		
-		#print(data)
+
+		#print("DEBUG test_python")
+		#print("obst:", obsts)
 
 		self.j += 1
-
 		if self.j == 1:
-
-			#roi_boundaries = [point(data[i].x, data[i].y) 
-			#				for i in range(len(data) - 1)]
 			roi_boundaries = [point(data[i].x, data[i].y) 
 							for i in range(len(data) - 2)]
-			
 			parking_space = [point_ for point_ in data[1:5]]
-
-			#change roi boundary around the goal 
-			#DEBUG achived:
-			#roi_boundaries[1].x -= 0.3
-			#roi_boundaries[2].x -= 0.3
-			#roi_boundaries[3].x += 0.3
-			#roi_boundaries[4].x += 0.3
-
-			#roi_boundaries[1].x -= 0.4
-			#roi_boundaries[2].x -= 0.4
-			#roi_boundaries[3].x += 0.25
-			#roi_boundaries[4].x += 0.25
-
-			#roi_boundaries[2].y -= 2
-			#roi_boundaries[3].y -= 2
-
-
 			vehicle_pos = point(data[-2].x, data[-2].y)
-
 			parking_pos = [(data[4].x + data[1].x) / 2, 
 						(data[1].y + data[2].y) / 2 + 1]
-
-			#max_steps >= 2!!!!! (utils phis)
-			#DEBUG: 170 - 180 steps предел текущий
-			#max_steps = 30
+			dyn_obsts = []
+			for obst in obsts:
+				dyn_obsts.append([obst.x - data[-1].x, obst.y - data[-1].y, 
+														obst.theta, obst.v_x, 0])
+			print("DEBUG test_python:")
+			print("dyn obst:", dyn_obsts)
 			max_steps = args.max_steps
+			assert max_steps >= 2, "max_steps < 2!!!!! (utils phis)"
 			DEBUG_traj = False
+			DEBUG_static_obs = True
 			save_traj = True
-			number_image = 32
+			file_number = 32
 			
 			print("############################")
 			print(f"start getting trajectory max_steps = {max_steps}")
@@ -192,8 +207,14 @@ class RoiReader:
 			print(f"data recieved length: {len(data)}")
 			print(time.time())
 
+			if DEBUG_static_obs:
+				print("#---------------------------")
+				print("obstacles:")
+				for p in roi_boundaries:
+					print("x:", p.x, "y:", p.y)
+				print("#---------------------------")
 			isDone, images, trajectory, info_ = get_points(roi_boundaries, 
-						vehicle_pos, parking_pos, max_steps=max_steps)
+						vehicle_pos, parking_pos, max_steps=max_steps, dyn_obsts=dyn_obsts)
 
 			#print("getting done")
 			#print()
@@ -202,37 +223,11 @@ class RoiReader:
 			#save trajectory
 			if save_traj:
 				SAVE_DIR = "modules/tools/custom_2/saved_trajectory/"
-				
-				with open(SAVE_DIR + f"machine_config_{number_image}.txt", 'w') as f:
-					f.write(str(trajectory[2][-1]) + " " \
-						+ str(info_["car_length"]) + " " \
-						+ str(info_["car_width"]) + " " \
-						+ str(info_["wheel_base"]))
-
-				with open(SAVE_DIR + f"goals_{number_image}.txt", 'w') as f:
-					f.write(str(info_["first_goal"][0]) + " " \
-						+ str(info_["second_goal"][0]))
-					f.write(str(info_["first_goal"][1]) + " " \
-						+ str(info_["second_goal"][1]))
-
-				with open(SAVE_DIR + f"result_points_{number_image}.txt", 'w') as f:
-					f.write(" ".join([str(state.x) for state in trajectory[0]]))
-					f.write(" ".join([str(state.y) for state in trajectory[0]]))
-
-				with open(SAVE_DIR + f"result_roi_boundaries_{number_image}.txt", 'w') as f:
-					f.write(" ".join([str(state.x) for state in roi_boundaries]))
-					f.write(" ".join([str(state.y) for state in roi_boundaries]))
-				
-				with open(SAVE_DIR + f"parking_space_{number_image}.txt", 'w') as f:
-					f.write(" ".join([str(state.x) for state in parking_space]))
-					f.write(" ".join([str(state.y) for state in parking_space]))
-
-				#print("trajectory saved")
-				#print()
+				save_trajectory(SAVE_DIR, file_number, 
+						trajectory, info_, roi_boundaries, parking_space)
 				
 			trajectory_msg = roi_boundary_message()
 			trajectory_msg.timestamp = int(time.time() * 10 ** 7)
-
 			for state, a, phi in zip(trajectory[0], trajectory[1], trajectory[2]):
 				next_traj_point = trajectory_msg.point.add()
 				next_traj_point.x = state.x
@@ -244,13 +239,6 @@ class RoiReader:
 				if DEBUG_traj:
 					print(state.x, state.y)
 				#добавить steer, acceleration, v, accum_s
-
-			#print()
-			#print("average time for action")
-			#print(sum(trajectory[3]) / len(trajectory[3]))
-
-			#print("average time for step")
-			#print(sum(trajectory[4]) / len(trajectory[4]))
 
 			ten_trag_times_action = []
 			ten_trag_times_step = []
@@ -269,6 +257,7 @@ class RoiReader:
 			#print()
 
 			self.polamp_trajectory_writer.trajectory_writer.write(trajectory_msg)
+			#self.polamp_trajectory_writer.helper_svl_writer.write(trajectory_msg)
 
 			if isDone:
 				print("goal was achieved")
@@ -277,9 +266,6 @@ class RoiReader:
 			print("sending done")		
 			print("############################")
 			
-
-		
-
 
 if __name__ == "__main__":
 	apollo_test = ApolloFeatures()
@@ -378,30 +364,43 @@ if __name__ == "__main__":
 			x_end += 20
 			center_parkin_place_x = 388962.98
 			'''
-		
-	
-			"""
+			'''
+			#узкая дорога:
 			x_start = 165888
 			y_start = 77.2735
 
 			x_end = 165933
 			y_end = 77.2735
 
-			center_parkin_place_x = 165913
-			center_parkin_place_y = 72.5563
+			center_parkin_place_x = 165912
+			center_parkin_place_y = 72.23
 			number_of_place = 117
-			"""
-			
-			x_start = 388983
+			'''
+			'''
+			#паркинг лот с одним местом
+			x_start = 388974
 			y_start = 221155
 			
-			x_end = 389018
+			x_end = 389008
 			y_end = 221155
 
-			center_parkin_place_x = 388999
-			center_parkin_place_y = 221151
+			center_parkin_place_x = 388999.21
+			center_parkin_place_y = 221150.98
 			number_of_place = 82
+			'''
 
+			
+			#самые простые 10 первых мест
+			x_start = 388929.22559400817
+			y_start = 221208.13388718164
+			
+			x_end = 388981.85093914089
+			y_end = 221208.13388718164
+
+			center_parkin_place_x = 388964.21
+			center_parkin_place_y = 221201.40
+			number_of_place = 2
+			
 
 			roi_boundary_reader.parking_pos = point(center_parkin_place_x,
 													center_parkin_place_y)

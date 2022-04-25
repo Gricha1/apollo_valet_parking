@@ -4,6 +4,13 @@ package(default_visibility = ["//visibility:public"])
 
 
 py_library(
+    name = "update_config",
+    srcs = ["update_config.py"],
+    deps = [
+    ],
+)
+
+py_library(
     name = "generate_trajectory",
     srcs = ["generate_trajectory.py"],
     deps = [
@@ -31,15 +38,24 @@ py_library(
         "//modules/tools/custom_2/planning:generateMap",
         "//modules/tools/custom_2/policy_gradient:utlis",
         "//modules/tools/custom_2:generate_trajectory",
+        "//modules/tools/custom_2:update_config",
     ],
 )
-
-
-
 
 py_binary(
     name = "get_parking_points",
     srcs = ["get_parking_points.py"],
     deps = [
+    ],
+)
+
+
+py_binary(
+    name = "bridge_new_1",
+    srcs = ["bridge_new_1.py"],
+    deps = [
+        "//cyber/python/cyber_py3:cyber",
+        "//cyber/python/cyber_py3:cyber_time",
+        "//modules/planning/proto:planning_py_pb2",
     ],
 )
