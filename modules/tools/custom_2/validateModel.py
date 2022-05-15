@@ -25,7 +25,8 @@ class point:
         self.y = y
 
 
-def get_points(roi_boundaries, vehicle_pos, parking_pos, max_steps=30, dyn_obsts=[]):
+def get_points(d_first_goal, roi_boundaries, vehicle_pos, 
+                parking_pos, max_steps=30, dyn_obsts=[]):
     """
     input:
     roi_boundaries: list of type: point
@@ -49,7 +50,8 @@ def get_points(roi_boundaries, vehicle_pos, parking_pos, max_steps=30, dyn_obsts
     info_["wheel_base"] = car_config["wheel_base"]
 
     #create validate task
-    maps, _, valTasks, second_goal = create_task(roi_boundaries, vehicle_pos, 
+    maps, _, valTasks, second_goal = create_task(d_first_goal, 
+                                                roi_boundaries, vehicle_pos, 
                                                 parking_pos, dyn_obsts)
     info_["first_goal"] = valTasks["map0"][0][1]
 
@@ -132,7 +134,15 @@ def get_points(roi_boundaries, vehicle_pos, parking_pos, max_steps=30, dyn_obsts
     #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_39/weights_1_2_39.pickle', 'rb') as handle:
     #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_35/weights_1_2_35.pickle', 'rb') as handle:
     #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_39/weights_1_2_39.pickle', 'rb') as handle:
-    with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_48/weights_1_2_48.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_48/weights_1_2_48.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_55/weights_1_2_55.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_39/weights_1_2_39.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_57/weights_1_2_57.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_55/weights_1_2_55.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_60/weights_1_2_60.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_67/weights_1_2_67.pickle', 'rb') as handle:
+    #with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_55/weights_1_2_55.pickle', 'rb') as handle:
+    with open('modules/tools/custom_2/myModelWeight1/new_weights/conf_1_ex_2_run_67/weights_1_2_67.pickle', 'rb') as handle:
         weights = pickle.load(handle)
         trainer.get_policy().set_weights(weights)
 

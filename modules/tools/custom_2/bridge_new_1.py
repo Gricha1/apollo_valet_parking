@@ -42,10 +42,12 @@ class ROI_boundary_ready_reader:
        
 polamp_traj_check_reader = POLAMP_ready_reader()
 roi_boundary_check_reader = ROI_boundary_ready_reader()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--prob')
 parser.add_argument('-d', '--dynamic')
+parser.add_argument('-map', '--map')
+parser.add_argument('-n_p', '--number_of_place', type=int)
+parser.add_argument('-t_c', '--test_case', type=int)
 args = parser.parse_args()
 p = float(args.prob)
 dynamic = True
@@ -56,7 +58,10 @@ ego = lgsvl.wise.DefaultAssets.ego_lincoln2017mkz_apollo5_full_analysis
 #map = "95088a4f-4dbc-49b8-b7c8-b781d060de52"
 #map = "736709ef-8a65-46e2-ae32-d564cf5753b8"
 #map = "08a90728-c32c-40b2-ac51-d065b31f5aab"
-map = "95088a4f-4dbc-49b8-b7c8-b781d060de52"
+if args.map == "train":
+    map = "95088a4f-4dbc-49b8-b7c8-b781d060de52"
+else:
+    map = "736709ef-8a65-46e2-ae32-d564cf5753b8"
 SIMULATOR_HOST = os.environ.get("LGSVL__SIMULATOR_HOST", "127.0.0.1")
 SIMULATOR_PORT = int(os.environ.get("LGSVL__SIMULATOR_PORT", 8181))
 BRIDGE_HOST = os.environ.get("LGSVL__AUTOPILOT_0_HOST", "127.0.0.1")
@@ -80,14 +85,15 @@ forward = lgsvl.utils.transform_to_forward(egoState.transform)
 
 #----------------------------------------------------------
 
-count_of_parkining_places = 17
-count_of_fill_places = int(np.floor((count_of_parkining_places * p)))
-nums_of_fill_places = np.random.choice(np.arange(count_of_parkining_places),
-                                     size=count_of_fill_places, replace=False)
-indeces_of_fill_places = sorted(nums_of_fill_places)
+#count_of_parkining_places = 17
+#count_of_fill_places = int(np.floor((count_of_parkining_places * p)))
+#nums_of_fill_places = np.random.choice(np.arange(count_of_parkining_places),
+#                                     size=count_of_fill_places, replace=False)
+#indeces_of_fill_places = sorted(nums_of_fill_places)
 
-'''
+
 #Добавляем нпс
+'''
 npcState = lgsvl.AgentState()
 npcState.transform = egoState.transform
 npcState.transform.position.y += 0.5
@@ -102,12 +108,76 @@ for i in range(len(indeces_of_fill_places)):
         npcState_i.transform.position = egoState.position - 4 * ind_last * forward
     npcState_i.transform.position = egoState.position + 4 * ind_current * forward
     sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState_i)
-    
+'''
+#--------------------------------------------------Конфигурация препрядствий-----
+
+class to_pos:
+    def __init__(self, dx, dz, orientation, row, col):
+        self.dx = dx
+        self.dz = dz
+        self.orientation = orientation
+        self.row = row
+        self.col = col
+
+#to_place[i][j] - приращение которое нужно добавить к начальной позиции spawn[0] 
+# чтобы попасть в i, j парковочное место
+#x = -4.9 #первый ряд
+#x = 8 #второй ряд
+#x = 12.5 #третий ряд
+#x = 25.4 #четвертый ряд
+#orientation = -1 #-1 ориентация препядствия вниз
+#x -= 4.9 #первое парковочное место
+#z = 0.5 - 2.7 * 23 #первое парковочное место
+row_count_places = 4
+column_count_places = 24
+to_place = []
+for i in range(row_count_places):
+    for j in range(column_count_places):
+        if i == 0:
+            orientation = -1
+            dx = -6.4
+        elif i == 1:
+            orientation = 1
+            dx = 8
+        elif i == 2:
+            orientation = -1
+            dx = 12.5
+        else:
+            orientation = 1
+            dx = 25.4
+        dz = 0.5 - 2.7 * 23 + 2.7 * j
+        to_place.append(to_pos(dx, dz, orientation, i, j))
+        
+
+count_of_parkining_places = row_count_places * column_count_places
+count_of_fill_places = int(np.floor((count_of_parkining_places * p)))
+random_to_place = np.random.choice(to_place, size=count_of_fill_places, replace=False)
+
+
+number_of_place = args.number_of_place
+#number_of_place = 82
+ind_row_of_place = number_of_place // column_count_places
+ind_col_of_place = number_of_place % column_count_places - 1
+
+#------------------------------------------------------Добавление НПС------------------------------------------------------
+for pos in random_to_place:
+    npcState = lgsvl.AgentState()
+    spawns = sim.get_spawn()
+    npcState.transform = spawns[0]
+    npcState.transform.position.x += pos.dx
+    npcState.transform.position.z += pos.dz
+    npcState.transform.rotation.y += pos.orientation * 90
+    if pos.row == row_count_places - 1 and pos.col == 0:
+        continue
+    if pos.row == row_count_places - 1 and pos.col == 1:
+        continue
+    if not(pos.row == ind_row_of_place and pos.col == ind_col_of_place):
+        sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState)
 
 
 
 #----------------------------------------------------------
-'''
+
 
 
 
@@ -207,12 +277,32 @@ npcChangedLanes = False
 #sim.run(4)
 
 # The Simulation will pause every 0.5 seconds to check 2 conditions
+test_case = np.random.randint(27)
+
+right_shift = np.linspace(19.5, 18, 3)
+forward_shift = np.linspace(34, 38, 3)
+speed_obs = np.linspace(0.8, 1.2, 3)
+right_shift_ = right_shift[test_case % 3]
+if test_case // 3 >= 2:
+    forward_shift_ = forward_shift[2]
+else:
+    forward_shift_ = forward_shift[test_case // 3]
+
+if test_case // 9 >= 2:
+    speed_obs_ = speed_obs[2]
+else:
+    speed_obs_ = speed_obs[test_case // 9]
+
 follow_lane = False
 roi_follow_lane = False
 polamp_follow_lane = False
-right_shift_ = 1.3
-forward_shift_ = 30
-speed_obs_ = 1
+#right_shift_ = 0
+#forward_shift_ = 30
+#right_shift_ = 19.7 #working
+#forward_shift_ = 35 #working
+#speed_obs_ = 1 # wroking
+#right_shift_ = 19.5
+#forward_shift_ = 34
 roi_speed_sended = 0
 
 while True:
@@ -230,7 +320,7 @@ while True:
                                                     right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                     + forward_shift_ * forward
-        npcState_temp.transform.rotation.y -= 180
+        #npcState_temp.transform.rotation.y -= 180
         npc_before_polamp = sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState_temp)
         #npc.follow_closest_lane(
         #                                follow=True, 
@@ -245,7 +335,7 @@ while True:
                                             + right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                     - forward_shift_ * forward
-        npcState_temp.transform.rotation.y -= -180
+        #npcState_temp.transform.rotation.y -= -180
         roi_boundary_check_reader.car_created = True
 
     if polamp_traj_check_reader.ready_create_car \
@@ -257,7 +347,7 @@ while True:
                                                 - right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                 + forward_shift_ * forward
-        npcState_temp.transform.rotation.y -= 180
+        #npcState_temp.transform.rotation.y -= 180
         npc_after_polamp = sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState_temp)
         #npc_after_polamp.follow_closest_lane(
         #                                follow=True, 
@@ -270,7 +360,7 @@ while True:
                                                     + right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                     - forward_shift_ * forward
-        npcState_temp.transform.rotation.y -= -180
+        #npcState_temp.transform.rotation.y -= -180
         polamp_traj_check_reader.car_created = True
 
     if roi_boundary_check_reader.ready_create_car \

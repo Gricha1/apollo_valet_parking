@@ -17,6 +17,8 @@ import argparse
 parser = argparse.ArgumentParser(description='Get max steps for validation')
 parser.add_argument('-s', '--max_steps', type=int, 
                     help='max_steps = steps in env')
+parser.add_argument('-map', '--map')
+parser.add_argument('-n_p', '--number_of_place', type=int)
 args = parser.parse_args()
 
 
@@ -190,8 +192,11 @@ class RoiReader:
 						(data[1].y + data[2].y) / 2 + 1]
 			dyn_obsts = []
 			for obst in obsts:
+				theta = obst.theta
+				if obst.theta == 0 and obst.v_x <= 0:
+					theta = degToRad(180)
 				dyn_obsts.append([obst.x - data[-1].x, obst.y - data[-1].y, 
-														obst.theta, obst.v_x, 0])
+														theta, obst.v_x, 0])
 			print("DEBUG test_python:")
 			print("dyn obst:", dyn_obsts)
 			max_steps = args.max_steps
@@ -213,8 +218,43 @@ class RoiReader:
 				for p in roi_boundaries:
 					print("x:", p.x, "y:", p.y)
 				print("#---------------------------")
-			isDone, images, trajectory, info_ = get_points(roi_boundaries, 
-						vehicle_pos, parking_pos, max_steps=max_steps, dyn_obsts=dyn_obsts)
+
+			isDone = False
+			d_first_goals = [
+							[1.4, -1],
+							[1.4, -1.5],
+							[1.4, -2],
+							[1.4, -2.3],
+							[2, -1],
+							[2, -1.5],
+							[2, -2],
+							[2, -2.3],
+							[2.3, -1],
+							[2.3, -1.5],
+							[2.3, -2],
+							[2.3, -2.3]
+							]
+			ind = -1
+			#d_first_goal_x = 1.4
+			#d_first_goal_y = -1.5
+			#d_first_goal = [d_first_goal_x, d_first_goal_y]
+			while not isDone:
+				print("goal shift index: ", ind)
+				d_first_goal = d_first_goals[ind]
+				isDone, images, trajectory, info_ = get_points(d_first_goal, 
+							roi_boundaries, 
+							vehicle_pos, parking_pos, max_steps=max_steps, 
+							dyn_obsts=dyn_obsts)
+				#ind -= 1
+				if ind == -1:
+					ind = -2
+				else:
+					ind = -1
+				#d_first_goal_x = d_first_goal_x
+				#d_first_goal_y -= 0.5
+				#d_first_goal = [d_first_goal_x, d_first_goal_y]
+
+
 
 			#print("getting done")
 			#print()
@@ -377,6 +417,7 @@ if __name__ == "__main__":
 			number_of_place = 117
 			'''
 			'''
+			
 			#паркинг лот с одним местом
 			x_start = 388974
 			y_start = 221155
@@ -389,18 +430,41 @@ if __name__ == "__main__":
 			number_of_place = 82
 			'''
 
-			
-			#самые простые 10 первых мест
-			x_start = 388929.22559400817
-			y_start = 221208.13388718164
-			
-			x_end = 388981.85093914089
-			y_end = 221208.13388718164
+			if args.map == "train":
+				#самые простые 10 первых мест
+				x_start = 388929.22559400817
+				y_start = 221208.13388718164
+				
+				x_end = 388981.85093914089
+				y_end = 221208.13388718164
 
-			center_parkin_place_x = 388964.21
-			center_parkin_place_y = 221201.40
-			number_of_place = 2
-			
+				center_parkin_place_x = 388964.21
+				center_parkin_place_y = 221201.40
+				number_of_place = 2
+			else:
+				#паркинг лот с одним местом
+				#x_start = 388974
+				#y_start = 221155
+				x_start = 389049.52
+				y_start = 221176.54
+				number_of_place = args.number_of_place
+				#number_of_place = 82
+				if number_of_place == 82:	
+					x_end = 389008
+					y_end = 221155
+					center_parkin_place_x = 388999.21
+					center_parkin_place_y = 221150.98
+				elif number_of_place == 76:
+					x_end = 389008
+					y_end = 221155
+					center_parkin_place_x = 388983.08
+					center_parkin_place_y = 221151.00
+				elif number_of_place == 91:
+					x_end = 389032.75
+					y_end = 221155
+					center_parkin_place_x = 389020.83
+					center_parkin_place_y = 221150.75
+
 
 			roi_boundary_reader.parking_pos = point(center_parkin_place_x,
 													center_parkin_place_y)

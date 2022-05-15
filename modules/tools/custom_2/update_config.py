@@ -45,12 +45,13 @@ def update_our_env_config():
         "bias_beam": 0,
         "n_beams": 39,
         "frame_stack": 4,
-        "hard_constraints": 0,
-        "medium_constraints": 1,
+        "hard_constraints": 1,
+        "medium_constraints": 0,
         "soft_constraints": 0,
         "affine_transform": 0,
         "reward_with_potential": 1,
         "use_acceleration_penalties" : 1,
+        "use_velocity_goal_penalty" : 0,
         "union": 1,
         "dynamic": 1,
         "static": 1,
@@ -100,7 +101,7 @@ def update_train_config():
         "use_lstm": 0,
         "lstm_use_prev_action": 0,
         "free_log_std": 1,
-        "run_num": 100,
+        "run_num": 60,
         "ex_num": 2,
         "conf_num": 1,
         "loaded_run_num": 20,
@@ -119,10 +120,11 @@ def update_reward_config():
         "collision": 20,
         "goal": 200,
         "timeStep": 1,
-        "distance": 3,
+        "distance": 5,
         "overSpeeding": 5,
         "overSteering": 5,
         "Eps_penalty": 0.5,
-        "a_penalty": 0.5
+        "a_penalty": 0.5,
+        "v_goal_penalty": 30
     }   
     return reward_config

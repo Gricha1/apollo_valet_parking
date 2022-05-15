@@ -56,6 +56,8 @@ std::vector<std::pair<double, double>> vector_obsts_params = {};
 std::vector<double> vector_obsts_thetas = {};
 std::vector<std::pair<double, double>> vector_obsts_velocity = {};
 ADCTrajectory* example_of_adc_trajectory;
+//new changes
+int count_of_repeat = 0;
 
 /*
 //delete
@@ -488,7 +490,8 @@ bool PlanningComponent::Proc(
                                       * dy_current_to_vehicle);
         if (!(current_index < last_trajectory_start_index)
             && !(last_trajectory_end_index != -1 
-            && last_trajectory_end_index < current_index)) {
+            && last_trajectory_end_index < current_index)
+            && current_index >= index_prev_nearest_point) {
           if (current_dist_to_vehicle <= nearest_dist) {
             if (current_dist_to_vehicle < nearest_dist) {
               nearest_dist = current_dist_to_vehicle;
@@ -508,6 +511,26 @@ bool PlanningComponent::Proc(
         ts.push_back(current_point_t);
         current_index++;
       }
+
+      //new changes: debug
+      if (index_nearest_point == index_prev_nearest_point) {
+        count_of_repeat++;
+        AWARN << "debug plan comp: " 
+              << "count in " << index_nearest_point
+              << " " << count_of_repeat << std::endl;
+      }
+      else {
+        count_of_repeat = 0;
+      }
+      if (count_of_repeat >= 2 
+          && int(polamp_trajectory_info.size()) 
+              != index_nearest_point + 1) {
+        index_nearest_point++;
+        nearest_point_t = ts[index_nearest_point];
+        nearest_point_acc_s = acc_ss[index_nearest_point];
+        count_of_repeat = 0;
+      }
+
       index_prev_nearest_point = index_nearest_point;
 
       //set gear for each point in ADCtrajectory

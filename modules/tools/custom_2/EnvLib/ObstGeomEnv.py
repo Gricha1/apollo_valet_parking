@@ -37,40 +37,30 @@ class VehicleConfig:
         self.max_ang_vel = car_config["max_ang_vel"]
         self.max_ang_acc = car_config["max_ang_acc"]
         self.delta_t = car_config["delta_t"]
-        self.rear_to_center = (self.length - self.wheel_base) / 2.
-        self.min_dist_to_check_collision = math.hypot(self.rear_to_center + self.length / 2., self.width / 2.)
-
-        ##
-        self.jerk = car_config["jerk"]
         self.use_clip = car_config["use_clip"]
+        self.jerk = car_config["jerk"]
         if self.jerk != 0:
-                self.is_jerk = True
+            self.is_jerk = True
         else:
             self.is_jerk = False
-            
-    
+        self.rear_to_center = (self.length - self.wheel_base) / 2.
+        self.min_dist_to_check_collision = math.hypot(self.wheel_base / 2 \
+                + self.length / 2., self.width / 2.)
+        self.car_radius = math.hypot(self.length / 2., self.width / 2.)
+        
     def dynamic(self, state, action):
         a = action[0]
         Eps = action[1]
-
-        #custom adding:
+        dt = self.delta_t
         if self.use_clip:
             a = np.clip(a, -self.max_acc, self.max_acc)
             Eps = np.clip(Eps, -self.max_ang_acc, self.max_ang_acc)
-        
-
-        ##
-        if self.jerk:
-          if abs(a - self.a) > self.jerk:
-            if a > self.a:
-                a = self.a + abs(a - self.a)
-            else:
-                a = self.a - abs(a - self.a)
-        #debug
-        #a = 2
-        #Eps = 0
-        
-        dt = self.delta_t
+        if self.is_jerk:
+            if abs(a - self.a) > self.jerk:
+                if a > self.a:
+                    a = self.a + abs(a - self.a)
+                else:
+                    a = self.a - abs(a - self.a)
         self.a = a
         self.Eps = Eps
         
@@ -98,12 +88,14 @@ class VehicleConfig:
         new_state = State(x, y, theta, V, steer)
 
         return new_state, overSpeeding, overSteering
-     
+    
+    
     def shift_state(self, state, toCenter=False):
         l = self.length / 2
         shift = l - self.rear_to_center
         shift = -shift if toCenter else shift
-        new_state = State(state.x + shift * cos(state.theta), state.y + shift * sin(state.theta), state.theta, state.v, state.steer)
+        new_state = State(state.x + shift * cos(state.theta), 
+                state.y + shift * sin(state.theta), state.theta, state.v, state.steer)
         return new_state
 
 class ObsEnvironment(gym.Env):
@@ -136,7 +128,7 @@ class ObsEnvironment(gym.Env):
         self.MEDIUM_EPS = env_config['MEDIUM_EPS']
         self.SOFT_EPS = env_config['SOFT_EPS']
         self.ANGLE_EPS = degToRad(env_config['ANGLE_EPS'])
-        self.SPEED_EPS = kmToM(env_config['SPEED_EPS'])
+        self.SPEED_EPS = env_config['SPEED_EPS']
         self.STEERING_EPS = degToRad(env_config['STEERING_EPS'])
         self.MAX_DIST_LIDAR = env_config['MAX_DIST_LIDAR']
         self.UPDATE_SPARSE = env_config['UPDATE_SPARSE']
@@ -150,6 +142,7 @@ class ObsEnvironment(gym.Env):
         self.bias_beam = env_config['bias_beam']
         self.n_beams = env_config['n_beams']
         self.use_acceleration_penalties = env_config['use_acceleration_penalties']
+        self.use_velocity_goal_penalty = env_config['use_velocity_goal_penalty']
         self.dynamic_obstacles = []
         self.dynamic_obstacles_v_s = []
         self.dyn_acc = 0
@@ -165,8 +158,10 @@ class ObsEnvironment(gym.Env):
             self.reward_config["overSteering"]
         ]
         if self.use_acceleration_penalties:
-                self.reward_weights.append(self.reward_config["Eps_penalty"])
-                self.reward_weights.append(self.reward_config["a_penalty"])
+            self.reward_weights.append(self.reward_config["Eps_penalty"])
+            self.reward_weights.append(self.reward_config["a_penalty"])
+        if self.use_velocity_goal_penalty:
+            self.reward_weights.append(self.reward_config["v_goal_penalty"])
         self.unionTask = env_config['union']
         if self.unionTask:
                 self.second_goal = State(config["second_goal"][0], 
@@ -174,7 +169,6 @@ class ObsEnvironment(gym.Env):
                                 config["second_goal"][2],
                                 config["second_goal"][3],
                                 config["second_goal"][4])
-        
         assert self.hard_constraints \
             + self.medium_constraints \
             + self.soft_constraints == 1, "custom assert: only one constraint is acceptable"
@@ -464,10 +458,13 @@ class ObsEnvironment(gym.Env):
             self.obstacle_segments.append(self.getBB(obs, width=width, length=length, ego=False))
         self.dyn_obstacle_segments = []
         for dyn_obst in self.dynamic_obstacles:
-            if math.hypot(self.current_state.x - dyn_obst.x, self.current_state.y - dyn_obst.y) < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
+            if math.hypot(self.current_state.x - dyn_obst.x, self.current_state.y - dyn_obst.y) \
+                < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
                 center_dyn_obst = self.vehicle.shift_state(dyn_obst)
                 width = self.vehicle.width / 2 + 0.3
                 length = self.vehicle.length / 2 + 0.1
+                #width = self.vehicle.width / 2
+                #length = self.vehicle.length / 2
                 agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
                 self.dyn_obstacle_segments.append(agentBB)
                 #self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
@@ -508,14 +505,22 @@ class ObsEnvironment(gym.Env):
             reward.append(0)
             reward.append(0)
             reward.append(0)
-        
         if self.use_acceleration_penalties:
-                reward.append(-abs(self.vehicle.Eps))
-                reward.append(-abs(self.vehicle.a))
+            reward.append(-abs(self.vehicle.Eps))
+            reward.append(-abs(self.vehicle.a))
+        if self.use_velocity_goal_penalty:
+            #print("debug obst:", new_delta)
+            #if self.start_dist != 0:
+            #    penalty = 1 - new_delta / self.start_dist
+            #else:
+            #    penalty = 1
+            #reward.append(-penalty * abs(new_state.v))
+            if goalReached:
+                reward.append(-abs(new_state.v))
+            else:
+                reward.append(0)
 	
-
         return np.matmul(self.reward_weights, reward)
-        
 
     def isCollision(self, state, min_beam, lst_indexes=[]):
         
@@ -532,17 +537,22 @@ class ObsEnvironment(gym.Env):
             for obstacle in self.dyn_obstacle_segments:
                 mid_x = (obstacle[0][0].x + obstacle[1][1].x) / 2.
                 mid_y = (obstacle[0][0].y + obstacle[1][1].y) / 2.
-                distance = math.hypot(mid_x - state.x, mid_y - state.y)
-                if (distance > (self.vehicle.min_dist_to_check_collision)):
-                    continue
+                distance = math.hypot(mid_x - state.x, mid_y - state.y)    
+                #if (distance > (self.vehicle.min_dist_to_check_collision)):
+                dyn_obst_corner_x = obstacle[0][0].x
+                dyn_obst_corner_y = obstacle[0][0].y
+                dyn_obst_radius = math.hypot(mid_x - dyn_obst_corner_x, 
+                                             mid_y - dyn_obst_corner_y)
+                #if (distance > (self.vehicle.car_radius + dyn_obst_radius)):
+                #    continue
                 if (intersectPolygons(obstacle, bounding_box)):
                     return True
             
         return False
 
     def __goalDist(self, state):
-        return math.hypot(self.goal.x - state.x, self.goal.y - state.y )
-    
+        return math.hypot(self.goal.x - state.x, self.goal.y - state.y)
+
     def obst_dynamic(self, state, action, previous_v_s, constant_forward=True):
         a = action[0]
         Eps = action[1]
@@ -616,9 +626,11 @@ class ObsEnvironment(gym.Env):
             for dyn_obst in self.dynamic_obstacles:
                 distance = math.hypot(new_state.x - dyn_obst.x, new_state.y - dyn_obst.y)
                 if distance < (self.MAX_DIST_LIDAR + self.vehicle.min_dist_to_check_collision):
-                    center_dyn_obst = self.vehicle.shift_state(dyn_obst)
                     width = self.vehicle.width / 2 + 0.3
                     length = self.vehicle.length / 2 + 0.1
+                    #width = self.vehicle.width / 2
+                    #length = self.vehicle.length / 2
+                    center_dyn_obst = self.vehicle.shift_state(dyn_obst)
                     agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
                     self.dyn_obstacle_segments.append(agentBB)
                     #self.dyn_obstacle_segments.append(self.getBB(center_dyn_obst))
@@ -633,24 +645,36 @@ class ObsEnvironment(gym.Env):
         self.collision_time += (end_time - start_time)
         distanceToGoal = self.__goalDist(new_state)
         info["EuclideanDistance"] = distanceToGoal
-
-        if self.hard_constraints:
-            goalReached = distanceToGoal < self.HARD_EPS and abs(
-                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
-                and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
-        elif self.medium_constraints:
-            goalReached = distanceToGoal < self.MEDIUM_EPS and abs(
-                normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS
-        elif self.soft_constraints:
-            goalReached = distanceToGoal < self.SOFT_EPS
-
+        if self.first_goal_reached:
+            if self.hard_constraints:
+                goalReached = distanceToGoal < self.HARD_EPS and abs(
+                    normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS \
+                    and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
+            elif self.medium_constraints:
+                goalReached = distanceToGoal < self.MEDIUM_EPS and abs(
+                    normalizeAngle(new_state.theta - self.goal.theta)) < self.ANGLE_EPS
+            elif self.soft_constraints:
+                goalReached = distanceToGoal < self.SOFT_EPS
+        else:
+            if self.soft_constraints:
+                goalReached = distanceToGoal < self.SOFT_EPS + 0.5
+            elif self.medium_constraints:
+                goalReached = distanceToGoal < self.MEDIUM_EPS + 0.5
+            elif self.hard_constraints:
+                goalReached = distanceToGoal < self.HARD_EPS + 2\
+                    and abs(new_state.v - self.goal.v) <= self.SPEED_EPS
         reward = self.__reward(self.old_state, new_state, goalReached, collision, overSpeeding, overSteering)
+
+        #DEBUG
+        #if goalReached and not self.first_goal_reached:
+        #    if normalizeAngle(new_state.theta - self.goal.theta) >= self.ANGLE_EPS \
+        #        or distanceToGoal >= self.HARD_EPS:
+        #        print("dist:", distanceToGoal, "angl:", radToDeg(abs(normalizeAngle(new_state.theta - self.goal.theta))),
+        #              "speed:", abs(new_state.v - self.goal.v) <= self.SPEED_EPS)
 
         if not (self.stepCounter % self.UPDATE_SPARSE):
             self.old_state = self.current_state
-        
         self.stepCounter += 1
-        
         if goalReached or collision:
             if self.unionTask:
                 if goalReached:
@@ -658,6 +682,7 @@ class ObsEnvironment(gym.Env):
                     if not self.first_goal_reached:
                         #print("DEBUG")
                         self.first_goal_reached = True
+                        print('first goal was achieved')
                         #self.goal = State(13, -5.5, degToRad(90), 0, 0)
                         self.goal = self.second_goal
                         self.start_dist = self.__goalDist(new_state)
@@ -715,9 +740,11 @@ class ObsEnvironment(gym.Env):
                 self.drawObstacles(obstacle)
 
         for dyn_obst in self.dynamic_obstacles:
-            center_dyn_obst = self.vehicle.shift_state(dyn_obst)
             width = self.vehicle.width / 2 + 0.3
             length = self.vehicle.length / 2 + 0.1
+            #width = self.vehicle.width / 2
+            #length = self.vehicle.length / 2
+            center_dyn_obst = self.vehicle.shift_state(dyn_obst)
             agentBB = self.getBB(center_dyn_obst, width=width, length=length, ego=False)
             #agentBB = self.getBB(center_dyn_obst)
 
