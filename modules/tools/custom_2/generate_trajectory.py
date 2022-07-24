@@ -13,13 +13,14 @@ def generate_first_goal(d_first_goal, roi_boundaries,
     generate goal for forward task
     """
     d_first_goal_x, d_first_goal_y = d_first_goal
-    x = roi_boundaries[4].x + d_first_goal_x
-    #x = (roi_boundaries[4].x + roi_boundaries[5].x) / 2
-    y = (roi_boundaries[6].y + roi_boundaries[5].y) / 2 \
-      + (roi_boundaries[6].y - roi_boundaries[5].y) / 4 + d_first_goal_y
+    #x = roi_boundaries[4].x + d_first_goal_x
+    x = (roi_boundaries[4].x + roi_boundaries[5].x) / 2
     #y = (roi_boundaries[6].y + roi_boundaries[5].y) / 2 \
-    #  + (roi_boundaries[6].y - roi_boundaries[5].y) / 4 - 2.3
-    theta = 30 * (pi / 180)
+    #  + (roi_boundaries[6].y - roi_boundaries[5].y) / 4 + d_first_goal_y
+    y = (roi_boundaries[6].y + roi_boundaries[5].y) / 2 \
+      + (roi_boundaries[6].y - roi_boundaries[5].y) / 4 - 2.3
+    #theta = 30 * (pi / 180)
+    theta = 0 * (pi / 180)
     first_goal = [x, y, theta, 0., 0]
             
     return first_goal

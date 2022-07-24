@@ -43,13 +43,13 @@ class ROI_boundary_ready_reader:
 polamp_traj_check_reader = POLAMP_ready_reader()
 roi_boundary_check_reader = ROI_boundary_ready_reader()
 parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--prob')
-parser.add_argument('-d', '--dynamic')
+parser.add_argument('-dence_prob', '--dence_prob')
+parser.add_argument('-dynamic', '--dynamic')
 parser.add_argument('-map', '--map')
-parser.add_argument('-n_p', '--number_of_place', type=int)
-parser.add_argument('-t_c', '--test_case', type=int)
+parser.add_argument('-parking_number', '--number_of_place', type=int)
+#parser.add_argument('-test_case', '--test_case', type=int)
 args = parser.parse_args()
-p = float(args.prob)
+p = float(args.dence_prob)
 dynamic = True
 if args.dynamic == "0":
     dynamic = False
@@ -128,6 +128,7 @@ class to_pos:
 #orientation = -1 #-1 ориентация препядствия вниз
 #x -= 4.9 #первое парковочное место
 #z = 0.5 - 2.7 * 23 #первое парковочное место
+'''
 row_count_places = 4
 column_count_places = 24
 to_place = []
@@ -159,7 +160,7 @@ number_of_place = args.number_of_place
 ind_row_of_place = number_of_place // column_count_places
 ind_col_of_place = number_of_place % column_count_places - 1
 
-#------------------------------------------------------Добавление НПС------------------------------------------------------
+#------------------------------------------------------Добавление НПС---------------------
 for pos in random_to_place:
     npcState = lgsvl.AgentState()
     spawns = sim.get_spawn()
@@ -175,19 +176,24 @@ for pos in random_to_place:
         sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState)
 
 
-
+'''
 #----------------------------------------------------------
 
 
 
 
 #------------------------Добавление нпс_1 машины---------------------
+#npcState = lgsvl.AgentState()
 #npcState.transform = egoState.transform
-#npcState.transform.position = egoState.position + 3.6 * right
-#npcState.transform.position = egoState.position + 7 * forward
+#npcState.transform.position = egoState.position + 5.8 * right
+#npcState.transform.position = egoState.position + 22.5 * forward
 #npcState.transform.position.y += 0.5  
 #npcState.transform.rotation.y -= 90
 #npc = sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState)
+#npcState.transform.position = egoState.position - 5.8 * right
+#npcState.transform.position = egoState.position - 22.5 * forward
+#npcState.transform.position.y -= 0.5  
+#npcState.transform.rotation.y += 90
 
 
 
@@ -203,11 +209,11 @@ npc_3 = sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState_3)
 npcState_3.transform.position = egoState.position + 3 * right
 npcState_3.transform.position = egoState.position - 40 * forward
 npcState_3.transform.rotation.y -= -180
-Начальное движение для НПС 3
-if case == "1":
-    s = npcState_3
-    s.velocity.y = 10
-    npc_3.state = s
+#Начальное движение для НПС 3
+#if case == "1":
+#    s = npcState_3
+#    s.velocity.y = 10
+#    npc_3.state = s
 '''
 
 #----------------Добавление нпс 2 машины----------------------------------------
@@ -265,18 +271,10 @@ ego.on_custom(on_control_received)
 #npc_2.follow_closest_lane(follow=True, max_speed=8, isLaneChange=False)
 #npc_2.follow(waypoints)
 
-
-
-# t0 is the time when the Simulation started
 t0 = time.time()
 
-# This will keep track of if the NPC has already changed lanes
 npcChangedLanes = False
 
-# Run Simulation for 4 seconds before checking cut-in or end conditions
-#sim.run(4)
-
-# The Simulation will pause every 0.5 seconds to check 2 conditions
 test_case = np.random.randint(27)
 
 right_shift = np.linspace(19.5, 18, 3)
@@ -296,11 +294,11 @@ else:
 follow_lane = False
 roi_follow_lane = False
 polamp_follow_lane = False
-#right_shift_ = 0
-#forward_shift_ = 30
+right_shift_ = 2.3
+forward_shift_ = 30
 #right_shift_ = 19.7 #working
 #forward_shift_ = 35 #working
-#speed_obs_ = 1 # wroking
+speed_obs_ = 1 # wroking
 #right_shift_ = 19.5
 #forward_shift_ = 34
 roi_speed_sended = 0
@@ -320,7 +318,7 @@ while True:
                                                     right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                     + forward_shift_ * forward
-        #npcState_temp.transform.rotation.y -= 180
+        npcState_temp.transform.rotation.y -= 180
         npc_before_polamp = sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState_temp)
         #npc.follow_closest_lane(
         #                                follow=True, 
@@ -335,7 +333,7 @@ while True:
                                             + right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                     - forward_shift_ * forward
-        #npcState_temp.transform.rotation.y -= -180
+        npcState_temp.transform.rotation.y -= -180
         roi_boundary_check_reader.car_created = True
 
     if polamp_traj_check_reader.ready_create_car \
@@ -347,7 +345,7 @@ while True:
                                                 - right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                 + forward_shift_ * forward
-        #npcState_temp.transform.rotation.y -= 180
+        npcState_temp.transform.rotation.y -= 180
         npc_after_polamp = sim.add_agent("Jeep", lgsvl.AgentType.NPC, npcState_temp)
         #npc_after_polamp.follow_closest_lane(
         #                                follow=True, 
@@ -360,7 +358,7 @@ while True:
                                                     + right_shift_ * right
         npcState_temp.transform.position = egoState.position \
                                                     - forward_shift_ * forward
-        #npcState_temp.transform.rotation.y -= -180
+        npcState_temp.transform.rotation.y -= -180
         polamp_traj_check_reader.car_created = True
 
     if roi_boundary_check_reader.ready_create_car \

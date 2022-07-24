@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(description='Get max steps for validation')
 parser.add_argument('-s', '--max_steps', type=int, 
                     help='max_steps = steps in env')
 parser.add_argument('-map', '--map')
-parser.add_argument('-n_p', '--number_of_place', type=int)
+parser.add_argument('-parking_number', '--number_of_place', type=int)
 args = parser.parse_args()
 
 
