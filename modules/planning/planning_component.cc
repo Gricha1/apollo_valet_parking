@@ -322,11 +322,11 @@ bool PlanningComponent::Proc(
 
   AWARN << "planning base Run Once" << std::endl;
   planning_base_->RunOnce(local_view_, &adc_trajectory_pb, 
-                &roi_boundaries_pb,
-                &roi_boundary_writer_,
-                flag_trajectory,
-                &trajectory,
-                &polamp_trajectory_info);
+                          &roi_boundaries_pb,
+                          &roi_boundary_writer_,
+                          flag_trajectory,
+                          &trajectory,
+                          &polamp_trajectory_info);
   AWARN << "planning base Run Once done" << std::endl; 
 
   /*
@@ -414,90 +414,26 @@ bool PlanningComponent::Proc(
             << std::endl;
 
       // find point on Rl trajectory nearest(distance) to vehicle position
-      //
+      // and accumulated s, time 
+      double time_for_step = 0.1;
       std::vector<double> point_accumulated_s;
       std::vector<double> ts;
       int index_nearest_point = 0;
-      int current_index = 0;
       double nearest_point_t = 0;
       double nearest_point_accumulated_s = 0;
-      double dx_nearest_to_vehicle = polamp_trajectory_info.begin()->x 
-                                  - normalized_vehicle_x;
-      double dy_nearest_to_vehicle = polamp_trajectory_info.begin()->y 
-                                  - normalized_vehicle_y;
-      double nearest_dist = sqrt(dx_nearest_to_vehicle * dx_nearest_to_vehicle 
-                  + dy_nearest_to_vehicle * dy_nearest_to_vehicle);
-      double previous_x = polamp_trajectory_info.begin()->x;
-      double previous_y = polamp_trajectory_info.begin()->y;
-      double dx_current_to_previous;
-      double dy_current_to_previous;
-      double d_dist;
-      double dx_current_to_vehicle; 
-      double dy_current_to_vehicle;
-      double current_dist_to_vehicle;
-      double time_for_step = 0.1;
-      double current_point_time = -time_for_step;
-      double current_point_accumulated_s = 0;
-      AWARN << "debug before get nearest_point: " << std::endl;
-      AWARN << "last traj start index BEFORE near: " 
-            << last_sended_trajectory_start_index << std::endl;
-      AWARN << "last traj end index BEFORE near: " 
-            << last_sended_trajectory_end_index << std::endl;
-      for (auto &it : polamp_trajectory_info) {
-        current_point_time += time_for_step;
-        dx_current_to_previous = previous_x - it.x;
-        dy_current_to_previous = previous_y - it.y;
-        previous_x = it.x;
-        previous_y = it.y;
-        d_dist = sqrt(dx_current_to_previous * dx_current_to_previous 
-                      + dy_current_to_previous * dy_current_to_previous);
-        current_point_accumulated_s += d_dist;
-        dx_current_to_vehicle = it.x - normalized_vehicle_x;
-        dy_current_to_vehicle = it.y - normalized_vehicle_y;
-        current_dist_to_vehicle = sqrt(dx_current_to_vehicle 
-                                      * dx_current_to_vehicle 
-                                      + dy_current_to_vehicle 
-                                      * dy_current_to_vehicle);
-        if (current_index >= last_sended_trajectory_start_index
-            && (last_sended_trajectory_end_index == -1 
-            || current_index <= last_sended_trajectory_end_index)
-            && current_index >= index_previous_nearest_point) {
-          if (current_dist_to_vehicle < nearest_dist) {
-            nearest_dist = current_dist_to_vehicle;
-            nearest_point_t = current_point_time;
-            nearest_point_accumulated_s = current_point_accumulated_s;
-            index_nearest_point = current_index;
-            }
-          else if (current_dist_to_vehicle == nearest_dist
-              && index_nearest_point == index_previous_nearest_point) {
-            nearest_dist = current_dist_to_vehicle;
-            nearest_point_t = current_point_time;
-            nearest_point_accumulated_s = current_point_accumulated_s;
-            index_nearest_point = current_index;
-          }
-        }
-        point_accumulated_s.push_back(current_point_accumulated_s);
-        ts.push_back(current_point_time);
-        current_index++;
-      }
-      if (index_nearest_point == index_previous_nearest_point) {
-        count_of_repeat++;
-        AWARN << "debug plan comp: " 
-              << "count in " << index_nearest_point
-              << " " << count_of_repeat << std::endl;
-      }
-      else {
-        count_of_repeat = 0;
-      }
-      if (count_of_repeat >= 2 
-          && int(polamp_trajectory_info.size()) 
-              != index_nearest_point + 1) {
-        index_nearest_point++;
-        nearest_point_t = ts[index_nearest_point];
-        nearest_point_accumulated_s = point_accumulated_s[index_nearest_point];
-        count_of_repeat = 0;
-      }
+      GetNearPointToVehicleAndAccumulatedInfo(&point_accumulated_s,
+                                              &ts, 
+                                              &index_nearest_point,
+                                              &nearest_point_t, 
+                                              &nearest_point_accumulated_s,
+                                              time_for_step, 
+                                              normalized_vehicle_x, normalized_vehicle_y);
+      AWARN << "nearest point index: " << index_nearest_point << std::endl
+            << "nearest point time: " << nearest_point_t << std::endl
+            << "nearest point accumulates s: " << nearest_point_accumulated_s
+            << std::endl;
       index_previous_nearest_point = index_nearest_point;
+    
       //set gear for each point in ADCtrajectory
       std::vector<double> x;
       std::vector<double> y;
@@ -586,16 +522,12 @@ bool PlanningComponent::Proc(
         prev_gear = current_gear;
         current_ind++;
       }
-
-
       if (int(polamp_trajectory_info.size()) == current_ind) {
         last_sended_trajectory_end_index = current_ind - 1;
         a[current_ind - 2] = - v[current_ind - 2] / time_for_step;
         a[current_ind - 1] = 0;
         v[current_ind - 1] = 0;
       }
-
-
       //DEBUG gears 
       int debug_index = 0;
       int debug_current_ind = point_count;
@@ -624,28 +556,34 @@ bool PlanningComponent::Proc(
         kappa_coef = -1;
       }
       adc_trajectory_pb_polamp.set_gear(gear);
-      previous_x = current_polamp_traj.begin()->x;
-      previous_y = current_polamp_traj.begin()->y;
-      current_point_time = -time_for_step;
-      current_point_accumulated_s = 0;
+      double dx_current_to_previous = 0;
+      double dy_current_to_previous = 0;
+      double previous_x = current_polamp_traj.begin()->x;
+      double previous_y = current_polamp_traj.begin()->y;
+      double current_point_time = -time_for_step;
+      double current_point_accumulated_s = 0;
+      double dist_current_to_previous = 0;
       for (auto &it : current_polamp_traj) {
         current_point_time += time_for_step;
         dx_current_to_previous = previous_x - it.x;
         dy_current_to_previous = previous_y - it.y;
         previous_x = it.x;
         previous_y = it.y;
-        d_dist = sqrt(dx_current_to_previous * dx_current_to_previous 
+        dist_current_to_previous = sqrt(dx_current_to_previous * dx_current_to_previous 
                     + dy_current_to_previous * dy_current_to_previous);
-        current_point_accumulated_s += d_dist;
+        current_point_accumulated_s += dist_current_to_previous;
         point_count++;
 
         //DEBUG
         AWARN << "path point: " << point_count - 1
         << " x: " << it.x + originFramePointAbsoluteCoordinates.x()
-        << " + " << it.x + originFramePointAbsoluteCoordinates.x() - int(it.x + originFramePointAbsoluteCoordinates.x())
+        << " + " << it.x + originFramePointAbsoluteCoordinates.x() 
+                - int(it.x + originFramePointAbsoluteCoordinates.x())
         << " y: " << it.y + originFramePointAbsoluteCoordinates.y()
-        << " + " << it.y + originFramePointAbsoluteCoordinates.y() - int(it.y + originFramePointAbsoluteCoordinates.y())
-        << " accumulated_s: " << current_point_accumulated_s - nearest_point_accumulated_s + shift_s
+        << " + " << it.y + originFramePointAbsoluteCoordinates.y() 
+                - int(it.y + originFramePointAbsoluteCoordinates.y())
+        << " accumulated_s: " << current_point_accumulated_s 
+                - nearest_point_accumulated_s + shift_s
         << " t: " << current_point_time - nearest_point_t + shift_t
         << " gear: " << gears_of_points[point_count - 1]
         << std::endl 
@@ -840,6 +778,103 @@ bool PlanningComponent::Proc(
   history->Add(adc_trajectory_pb);
 
   return true;
+}
+
+void PlanningComponent::GetNearPointToVehicleAndAccumulatedInfo(
+                            std::vector<double>* point_accumulated_s,
+                            std::vector<double>* ts, int* index_nearest_point,
+                            double* nearest_point_t, double* nearest_point_accumulated_s,
+                            double time_for_step, 
+                            double normalized_vehicle_x, double normalized_vehicle_y) {
+  AWARN << std::endl
+        << "DEBUG func - get nearest point:" << std::endl
+        << "time for step: " << time_for_step << std::endl
+        << "normalized_vehicle_x: " << normalized_vehicle_x << std::endl
+        << "normalized_vehicle_y: " << normalized_vehicle_y << std::endl
+        << "before get nearest_point: " << std::endl
+        << "last traj start index: " 
+        << last_sended_trajectory_start_index << std::endl
+        << "last traj end index: " 
+        << last_sended_trajectory_end_index << std::endl;
+  int current_index = 0;
+  double dx_nearest_to_vehicle = polamp_trajectory_info.begin()->x 
+                              - normalized_vehicle_x;
+  double dy_nearest_to_vehicle = polamp_trajectory_info.begin()->y 
+                              - normalized_vehicle_y;
+  double nearest_dist = sqrt(dx_nearest_to_vehicle * dx_nearest_to_vehicle 
+              + dy_nearest_to_vehicle * dy_nearest_to_vehicle);
+  double previous_x = polamp_trajectory_info.begin()->x;
+  double previous_y = polamp_trajectory_info.begin()->y;
+  double dx_current_to_previous;
+  double dy_current_to_previous;
+  double dist_current_to_previous;
+  double dx_current_to_vehicle; 
+  double dy_current_to_vehicle;
+  double current_dist_to_vehicle;
+  double current_point_time = -time_for_step;
+  double current_point_accumulated_s = 0;
+  for (auto &it : polamp_trajectory_info) {
+    current_point_time += time_for_step;
+    dx_current_to_previous = previous_x - it.x;
+    dy_current_to_previous = previous_y - it.y;
+    previous_x = it.x;
+    previous_y = it.y;
+    dist_current_to_previous = sqrt(dx_current_to_previous * dx_current_to_previous 
+                  + dy_current_to_previous * dy_current_to_previous);
+    current_point_accumulated_s += dist_current_to_previous;
+    dx_current_to_vehicle = it.x - normalized_vehicle_x;
+    dy_current_to_vehicle = it.y - normalized_vehicle_y;
+    current_dist_to_vehicle = sqrt(dx_current_to_vehicle 
+                                  * dx_current_to_vehicle 
+                                  + dy_current_to_vehicle 
+                                  * dy_current_to_vehicle);
+    if (current_index >= last_sended_trajectory_start_index
+        && (last_sended_trajectory_end_index == -1 
+        || current_index <= last_sended_trajectory_end_index)
+        && current_index >= index_previous_nearest_point) {
+      if (current_dist_to_vehicle < nearest_dist) {
+        nearest_dist = current_dist_to_vehicle;
+        (*nearest_point_t) = current_point_time;
+        (*nearest_point_accumulated_s) = current_point_accumulated_s;
+        (*index_nearest_point) = current_index;
+        }
+      else if (current_dist_to_vehicle == nearest_dist
+          && (*index_nearest_point) == index_previous_nearest_point) {
+        nearest_dist = current_dist_to_vehicle;
+        (*nearest_point_t) = current_point_time;
+        (*nearest_point_accumulated_s) = current_point_accumulated_s;
+        (*index_nearest_point) = current_index;
+      }
+    }
+    point_accumulated_s->push_back(current_point_accumulated_s);
+    ts->push_back(current_point_time);
+    current_index++;
+  }
+  if ((*index_nearest_point) == index_previous_nearest_point) {
+    count_of_repeat++;
+    //AWARN << "debug plan comp: " 
+    //      << "count in " << (*index_nearest_point)
+    //      << " " << count_of_repeat << std::endl;
+  }
+  else {
+    count_of_repeat = 0;
+  }
+  if (count_of_repeat >= 2 
+      && int(polamp_trajectory_info.size()) 
+          != (*index_nearest_point) + 1) {
+    (*index_nearest_point) = (*index_nearest_point) + 1;
+    (*nearest_point_t) = (*ts)[(*index_nearest_point)];
+    (*nearest_point_accumulated_s) = (*point_accumulated_s)[(*index_nearest_point)];
+    count_of_repeat = 0;
+  }
+
+  for (unsigned i = 0; i < point_accumulated_s->size(); i++) {
+    AWARN << std::endl
+          << "accumulated s: " << (*point_accumulated_s)[i]
+          << " accumulated time: " << (*ts)[i]
+          << std::endl;
+  }
+  return;
 }
 
 void PlanningComponent::CheckRerouting() {

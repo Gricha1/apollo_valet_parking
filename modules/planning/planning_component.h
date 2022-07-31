@@ -60,9 +60,14 @@ class PlanningComponent final
 
   static void MessageCallback_obst(
     const std::shared_ptr<perception::PerceptionObstacles>& msg);
- 
   static void MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg);
+  static void GetNearPointToVehicleAndAccumulatedInfo(
+                            std::vector<double>* point_accumulated_s,
+                            std::vector<double>* ts, int* index_nearest_point,
+                            double* nearest_point_t, double* nearest_point_accumulated_s,
+                            double time_for_step, 
+                            double normalized_vehicle_x, double normalized_vehicle_y);
 
   bool Init() override;
 
@@ -87,8 +92,6 @@ class PlanningComponent final
 
   std::shared_ptr<cyber::Writer<ADCTrajectory>> planning_writer_;
   
-
-  //custom changes:
   std::shared_ptr<cyber::Reader<roi_boundary_message>> trajectory_reader_;
   std::shared_ptr<cyber::Reader<perception::PerceptionObstacles>> obstacles_reader_;
   std::shared_ptr<cyber::Writer<roi_boundary_message>> roi_boundary_writer_;
