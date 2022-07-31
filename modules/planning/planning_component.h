@@ -53,9 +53,9 @@ class PlanningComponent final
 
   static std::vector<std::pair<double, double>> trajectory;
   static bool flag_trajectory;
-  static int last_trajectory_end_index;
-  static int last_trajectory_start_index;
-  static int index_prev_nearest_point;
+  static int last_sended_trajectory_end_index;
+  static int last_sended_trajectory_start_index;
+  static int index_previous_nearest_point;
   static bool current_traj_polamp_gear;
 
   static void MessageCallback_obst(

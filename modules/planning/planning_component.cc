@@ -45,9 +45,9 @@ using apollo::cyber::Time;
 
 bool PlanningComponent::flag_trajectory = false;
 bool example_updated = false;
-int PlanningComponent::index_prev_nearest_point = -1;
-int PlanningComponent::last_trajectory_end_index = -1;
-int PlanningComponent::last_trajectory_start_index = -1;
+int PlanningComponent::index_previous_nearest_point = -1;
+int PlanningComponent::last_sended_trajectory_end_index = -1;
+int PlanningComponent::last_sended_trajectory_start_index = -1;
 bool PlanningComponent::current_traj_polamp_gear = true;
 std::vector<std::pair<double, double>> PlanningComponent::trajectory = {};
 std::vector<point_info> polamp_trajectory_info = {};
@@ -58,11 +58,6 @@ std::vector<std::pair<double, double>> vector_obsts_velocity = {};
 ADCTrajectory* example_of_adc_trajectory;
 //new changes
 int count_of_repeat = 0;
-
-/*
-//delete
-std::vector<point_info> delete_polamp = {};
-*/
 
 bool PlanningComponent::Init() {
   injector_ = std::make_shared<DependencyInjector>();
@@ -303,9 +298,8 @@ bool PlanningComponent::Proc(
   }
 
   ADCTrajectory adc_trajectory_pb;
-  //custom changes: take boundaries from roi decider
+
   auto roi_boundaries_pb = std::make_shared<roi_boundary_message>();
-  //custom changes: add dynamic, static obst info
   unsigned size_obsts = vector_obsts_position.size();
   for (unsigned i = 0; i < size_obsts; i++) {
     auto roi_point = roi_boundaries_pb->add_point();
@@ -318,8 +312,6 @@ bool PlanningComponent::Proc(
     roi_point->set_v_y(vector_obsts_velocity[i].second);
     roi_boundaries_pb->set_timestamp(Time::Now().ToNanosecond());
   }
-
-  //DEBUG
   AWARN << " debug obst info: " << roi_boundaries_pb->point_size()
         << std::endl;
   for (int i = 0; i < roi_boundaries_pb->point_size(); i++) { 
@@ -328,77 +320,66 @@ bool PlanningComponent::Proc(
           << std::endl;
   }
 
-  //DEBUG
   AWARN << "planning base Run Once" << std::endl;
-  //custom changes
-  if (true) {
-    planning_base_->RunOnce(local_view_, &adc_trajectory_pb, 
-                  &roi_boundaries_pb,
-                  &roi_boundary_writer_,
-                  flag_trajectory,
-                  &trajectory,
-                  &polamp_trajectory_info);
+  planning_base_->RunOnce(local_view_, &adc_trajectory_pb, 
+                &roi_boundaries_pb,
+                &roi_boundary_writer_,
+                flag_trajectory,
+                &trajectory,
+                &polamp_trajectory_info);
+  AWARN << "planning base Run Once done" << std::endl; 
 
-    AWARN << "planning base Run Once done" << std::endl; 
+  /*
+  if (roi_boundaries_pb->point_size() != 0) {
+    roi_point originFramePointAbsoluteCoordinates = roi_boundaries_pb
+                            ->point(roi_boundaries_pb
+                            ->point_size() - 1);
+    unsigned size_obsts = vector_obsts_position.size();
+    for (unsigned i = 0; i < size_obsts; i++) {
+      auto roi_point = roi_boundaries_pb->add_point();
+      roi_point->set_x(vector_obsts_position[i].first - originFramePointAbsoluteCoordinates.x());
+      roi_point->set_y(vector_obsts_position[i].second - originFramePointAbsoluteCoordinates.y());
+      roi_point->set_length(vector_obsts_params[i].first);
+      roi_point->set_width(vector_obsts_params[i].second);
+      roi_point->set_theta(vector_obsts_thetas[i]);
+      roi_point->set_v_x(vector_obsts_velocity[i].first);
+      roi_point->set_v_y(vector_obsts_velocity[i].second);
+      roi_boundaries_pb->set_timestamp(Time::Now().ToNanosecond());
+    }
 
-    /*
-    if (roi_boundaries_pb->point_size() != 0) {
-      roi_point origin_point = roi_boundaries_pb
-                              ->point(roi_boundaries_pb
-                              ->point_size() - 1);
-      unsigned size_obsts = vector_obsts_position.size();
-      for (unsigned i = 0; i < size_obsts; i++) {
-        auto roi_point = roi_boundaries_pb->add_point();
-        roi_point->set_x(vector_obsts_position[i].first - origin_point.x());
-        roi_point->set_y(vector_obsts_position[i].second - origin_point.y());
-        roi_point->set_length(vector_obsts_params[i].first);
-        roi_point->set_width(vector_obsts_params[i].second);
-        roi_point->set_theta(vector_obsts_thetas[i]);
-        roi_point->set_v_x(vector_obsts_velocity[i].first);
-        roi_point->set_v_y(vector_obsts_velocity[i].second);
-        roi_boundaries_pb->set_timestamp(Time::Now().ToNanosecond());
-      }
-
-      AWARN << "debug planning comp AFTER roi point" << std::endl;
-      roi_boundary_writer_->Write(roi_boundaries_pb);
-      AWARN << "debug planning comp AFTER message" << std::endl;
+    AWARN << "debug planning comp AFTER roi point" << std::endl;
+    roi_boundary_writer_->Write(roi_boundaries_pb);
+    AWARN << "debug planning comp AFTER message" << std::endl;
 
 
-      //DEBUG
-      AWARN << " debug obst info: " << roi_boundaries_pb->point_size()
+    //DEBUG
+    AWARN << " debug obst info: " << roi_boundaries_pb->point_size()
+          << std::endl;
+    for (int i = 0; i < roi_boundaries_pb->point_size(); i++) { 
+      AWARN << " x: " << roi_boundaries_pb->point(i).x()
+            << " y: " << roi_boundaries_pb->point(i).y()
             << std::endl;
-      for (int i = 0; i < roi_boundaries_pb->point_size(); i++) { 
-        AWARN << " x: " << roi_boundaries_pb->point(i).x()
-              << " y: " << roi_boundaries_pb->point(i).y()
-              << std::endl;
-      }
-    }
-    //roi_boundaries_pb->clear_point();
-    //roi_boundaries_pb->clear_timestamp();
-    */
-
-
-    common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
-
-    // modify trajectory relative time due to the timestamp change in header
-    auto start_time = adc_trajectory_pb.header().timestamp_sec();
-    const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
-    for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
-      p.set_relative_time(p.relative_time() + dt);
-    }
-
-    //custom changes
-    //example_of_adc_trajectory = &adc_trajectory_pb;
-    if (flag_trajectory && !example_updated) {
-      //DEBUG
-      AWARN << "update example" << std::endl;
-
-      example_of_adc_trajectory = &adc_trajectory_pb;
-      example_updated = true;
     }
   }
+  //roi_boundaries_pb->clear_point();
+  //roi_boundaries_pb->clear_timestamp();
+  */
 
-  //custom changes:
+
+  common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
+  // modify trajectory relative time due to the timestamp change in header
+  auto start_time = adc_trajectory_pb.header().timestamp_sec();
+  const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
+  for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
+    p.set_relative_time(p.relative_time() + dt);
+  }
+
+  if (flag_trajectory && !example_updated) {
+    AWARN << "update example" << std::endl;
+    example_of_adc_trajectory = &adc_trajectory_pb;
+    example_updated = true;
+  }
+
   bool debug_a_star = false;
   /*
   if (!debug_a_star) {
@@ -409,40 +390,29 @@ bool PlanningComponent::Proc(
   }
   */
   
-  //DEBUG
   AWARN << "flag traj: " << flag_trajectory
         << " updated example: " << example_updated << std::endl;
 
-  //custom changes
   if (!debug_a_star) {
     if (flag_trajectory) {
-      
-      /*
-      //delelte!!!
-      polamp_trajectory_info = delete_polamp;
-      int delete_count = 0;
-      auto it = polamp_trajectory_info.begin();
-      while (it != polamp_trajectory_info.end()) {
-        delete_count++;
-        if (delete_count % 2 == 0) {
-          polamp_trajectory_info.erase(it);
-        }
-        else {
-          it++;
-        }
-      }
-      */
-
       //adc_trajectory_pb.clear_debug();
       (*example_of_adc_trajectory).clear_debug();
+      // get vehicle normalized state, and origin point(ablosute coordinates)
       const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
       double vehicle_x = vehicle_state.x();
       double vehicle_y = vehicle_state.y();
-      roi_point origin_point = roi_boundaries_pb
+      roi_point originFramePointAbsoluteCoordinates = roi_boundaries_pb
                             ->point(roi_boundaries_pb
                             ->point_size() - 1);
-      vehicle_x -= origin_point.x();
-      vehicle_y -= origin_point.y();
+      double normalized_vehicle_x = vehicle_x 
+                    - originFramePointAbsoluteCoordinates.x();
+      double normalized_vehicle_y = vehicle_y 
+                    - originFramePointAbsoluteCoordinates.y();
+      AWARN << "init vehicle normalized state:" << std::endl
+            << "x: " << normalized_vehicle_x << " "
+            << "y: " << normalized_vehicle_y
+            << std::endl;
+      // find point on Rl trajectory nearest(distance) to vehicle position
       std::vector<double> acc_ss;
       std::vector<double> ts;
       int index_nearest_point = 0;
@@ -450,48 +420,46 @@ bool PlanningComponent::Proc(
       double nearest_point_t = 0;
       double nearest_point_acc_s = 0;
       double dx_nearest_to_vehicle = polamp_trajectory_info.begin()->x 
-                                  - vehicle_x;
+                                  - normalized_vehicle_x;
       double dy_nearest_to_vehicle = polamp_trajectory_info.begin()->y 
-                                  - vehicle_y;
+                                  - normalized_vehicle_y;
       double nearest_dist = sqrt(dx_nearest_to_vehicle * dx_nearest_to_vehicle 
                   + dy_nearest_to_vehicle * dy_nearest_to_vehicle);
-      double old_x = polamp_trajectory_info.begin()->x;
-      double old_y = polamp_trajectory_info.begin()->y;
-      double dx_;
-      double dy_;
+      double previous_x = polamp_trajectory_info.begin()->x;
+      double previous_y = polamp_trajectory_info.begin()->y;
+      double dx_current_to_previous;
+      double dy_current_to_previous;
+      double d_dist;
       double dx_current_to_vehicle; 
       double dy_current_to_vehicle;
       double current_dist_to_vehicle;
-      double d_dist;
-      double custom_dt = 0.1;
-      double current_point_t = -custom_dt;
+      double time_for_step = 0.1;
+      double current_point_t = -time_for_step;
       double current_point_acc_s = 0;
-
-      //DEBUG
       AWARN << "debug before get nearest_point: " << std::endl;
       AWARN << "last traj start index BEFORE near: " 
-            << last_trajectory_start_index << std::endl;
+            << last_sended_trajectory_start_index << std::endl;
       AWARN << "last traj end index BEFORE near: " 
-            << last_trajectory_end_index << std::endl;
-
+            << last_sended_trajectory_end_index << std::endl;
       for (auto &it : polamp_trajectory_info) {
-        current_point_t += custom_dt;
-        dx_ = old_x - it.x;
-        dy_ = old_y - it.y;
-        old_x = it.x;
-        old_y = it.y;
-        d_dist = sqrt(dx_ * dx_ + dy_ * dy_);
+        current_point_t += time_for_step;
+        dx_current_to_previous = previous_x - it.x;
+        dy_current_to_previous = previous_y - it.y;
+        previous_x = it.x;
+        previous_y = it.y;
+        d_dist = sqrt(dx_current_to_previous * dx_current_to_previous 
+                      + dy_current_to_previous * dy_current_to_previous);
         current_point_acc_s += d_dist;
-        dx_current_to_vehicle = it.x - vehicle_x;
-        dy_current_to_vehicle = it.y - vehicle_y;
+        dx_current_to_vehicle = it.x - normalized_vehicle_x;
+        dy_current_to_vehicle = it.y - normalized_vehicle_y;
         current_dist_to_vehicle = sqrt(dx_current_to_vehicle 
                                       * dx_current_to_vehicle 
                                       + dy_current_to_vehicle 
                                       * dy_current_to_vehicle);
-        if (!(current_index < last_trajectory_start_index)
-            && !(last_trajectory_end_index != -1 
-            && last_trajectory_end_index < current_index)
-            && current_index >= index_prev_nearest_point) {
+        if (current_index >= last_sended_trajectory_start_index
+            && !(last_sended_trajectory_end_index != -1 
+            && last_sended_trajectory_end_index < current_index)
+            && current_index >= index_previous_nearest_point) {
           if (current_dist_to_vehicle <= nearest_dist) {
             if (current_dist_to_vehicle < nearest_dist) {
               nearest_dist = current_dist_to_vehicle;
@@ -499,7 +467,7 @@ bool PlanningComponent::Proc(
               nearest_point_acc_s = current_point_acc_s;
               index_nearest_point = current_index;
             }
-            else if (index_nearest_point == index_prev_nearest_point) {
+            else if (index_nearest_point == index_previous_nearest_point) {
               nearest_dist = current_dist_to_vehicle;
               nearest_point_t = current_point_t;
               nearest_point_acc_s = current_point_acc_s;
@@ -511,9 +479,7 @@ bool PlanningComponent::Proc(
         ts.push_back(current_point_t);
         current_index++;
       }
-
-      //new changes: debug
-      if (index_nearest_point == index_prev_nearest_point) {
+      if (index_nearest_point == index_previous_nearest_point) {
         count_of_repeat++;
         AWARN << "debug plan comp: " 
               << "count in " << index_nearest_point
@@ -530,9 +496,7 @@ bool PlanningComponent::Proc(
         nearest_point_acc_s = acc_ss[index_nearest_point];
         count_of_repeat = 0;
       }
-
-      index_prev_nearest_point = index_nearest_point;
-
+      index_previous_nearest_point = index_nearest_point;
       //set gear for each point in ADCtrajectory
       std::vector<double> x;
       std::vector<double> y;
@@ -598,16 +562,16 @@ bool PlanningComponent::Proc(
       bool current_gear;
       bool prev_gear = true;
       current_traj_polamp_gear = true;
-      last_trajectory_start_index = 0;
+      last_sended_trajectory_start_index = 0;
       for (auto &it : polamp_trajectory_info) {
         current_gear = gears_of_points[current_ind];
         if (current_gear != prev_gear) {
-          a[current_ind - 1] = - v[current_ind - 1] / custom_dt;
-          a[current_ind] += v[current_ind] / custom_dt;
+          a[current_ind - 1] = - v[current_ind - 1] / time_for_step;
+          a[current_ind] += v[current_ind] / time_for_step;
           v[current_ind] = 0;
           if (current_ind > index_nearest_point) {
             current_polamp_traj.push_back(it);
-            last_trajectory_end_index = current_ind;
+            last_sended_trajectory_end_index = current_ind;
             break;
           }
           shift_s = acc_ss[current_ind];
@@ -615,7 +579,7 @@ bool PlanningComponent::Proc(
           point_count += current_ind;
           current_polamp_traj = {};
           current_traj_polamp_gear = !current_traj_polamp_gear;
-          last_trajectory_start_index = current_ind;
+          last_sended_trajectory_start_index = current_ind;
         }
         current_polamp_traj.push_back(it);
         prev_gear = current_gear;
@@ -624,8 +588,8 @@ bool PlanningComponent::Proc(
 
 
       if (int(polamp_trajectory_info.size()) == current_ind) {
-        last_trajectory_end_index = current_ind - 1;
-        a[current_ind - 2] = - v[current_ind - 2] / custom_dt;
+        last_sended_trajectory_end_index = current_ind - 1;
+        a[current_ind - 2] = - v[current_ind - 2] / time_for_step;
         a[current_ind - 1] = 0;
         v[current_ind - 1] = 0;
       }
@@ -659,26 +623,27 @@ bool PlanningComponent::Proc(
         kappa_coef = -1;
       }
       adc_trajectory_pb_polamp.set_gear(gear);
-      old_x = current_polamp_traj.begin()->x;
-      old_y = current_polamp_traj.begin()->y;
-      current_point_t = -custom_dt;
+      previous_x = current_polamp_traj.begin()->x;
+      previous_y = current_polamp_traj.begin()->y;
+      current_point_t = -time_for_step;
       current_point_acc_s = 0;
       for (auto &it : current_polamp_traj) {
-        current_point_t += custom_dt;
-        dx_ = old_x - it.x;
-        dy_ = old_y - it.y;
-        old_x = it.x;
-        old_y = it.y;
-        d_dist = sqrt(dx_ * dx_ + dy_ * dy_);
+        current_point_t += time_for_step;
+        dx_current_to_previous = previous_x - it.x;
+        dy_current_to_previous = previous_y - it.y;
+        previous_x = it.x;
+        previous_y = it.y;
+        d_dist = sqrt(dx_current_to_previous * dx_current_to_previous 
+                    + dy_current_to_previous * dy_current_to_previous);
         current_point_acc_s += d_dist;
         point_count++;
 
         //DEBUG
         AWARN << "path point: " << point_count - 1
-        << " x: " << it.x + origin_point.x()
-        << " + " << it.x + origin_point.x() - int(it.x + origin_point.x())
-        << " y: " << it.y + origin_point.y()
-        << " + " << it.y + origin_point.y() - int(it.y + origin_point.y())
+        << " x: " << it.x + originFramePointAbsoluteCoordinates.x()
+        << " + " << it.x + originFramePointAbsoluteCoordinates.x() - int(it.x + originFramePointAbsoluteCoordinates.x())
+        << " y: " << it.y + originFramePointAbsoluteCoordinates.y()
+        << " + " << it.y + originFramePointAbsoluteCoordinates.y() - int(it.y + originFramePointAbsoluteCoordinates.y())
         << " acc_s: " << current_point_acc_s - nearest_point_acc_s + shift_s
         << " t: " << current_point_t - nearest_point_t + shift_t
         << " gear: " << gears_of_points[point_count - 1]
@@ -692,8 +657,8 @@ bool PlanningComponent::Proc(
 
         auto next_traj_point = adc_trajectory_pb_polamp.add_trajectory_point();
         auto* path_point = next_traj_point->mutable_path_point();
-        path_point->set_x(it.x + origin_point.x());
-        path_point->set_y(it.y + origin_point.y());
+        path_point->set_x(it.x + originFramePointAbsoluteCoordinates.x());
+        path_point->set_y(it.y + originFramePointAbsoluteCoordinates.y());
         path_point->set_theta(it.phi);
         path_point->set_s(kappa_coef * (current_point_acc_s 
                         - nearest_point_acc_s + shift_s));
@@ -730,16 +695,16 @@ bool PlanningComponent::Proc(
             << index_nearest_point
             << std::endl;
       AWARN << "nearest index point before current traj: "
-            << index_prev_nearest_point
+            << index_previous_nearest_point
             << std::endl;
       //DEBUG
       AWARN << "vehicle state: "
-            << " x: " << vehicle_x + origin_point.x() 
+            << " x: " << normalized_vehicle_x + originFramePointAbsoluteCoordinates.x() 
             << " + " 
-            << vehicle_x + origin_point.x() - int(vehicle_x + + origin_point.x())
-            << " y: " << vehicle_y + + origin_point.y() 
+            << normalized_vehicle_x + originFramePointAbsoluteCoordinates.x() - int(normalized_vehicle_x + + originFramePointAbsoluteCoordinates.x())
+            << " y: " << normalized_vehicle_y + + originFramePointAbsoluteCoordinates.y() 
             << " + " 
-            << vehicle_y + origin_point.y() - int(vehicle_y + origin_point.y()) 
+            << normalized_vehicle_y + originFramePointAbsoluteCoordinates.y() - int(normalized_vehicle_y + originFramePointAbsoluteCoordinates.y()) 
             << std::endl;
 
       common::util::FillHeader(node_->Name(), &adc_trajectory_pb_polamp);
@@ -752,9 +717,9 @@ bool PlanningComponent::Proc(
           << adc_trajectory_pb_polamp.path_point_size()
           << " gear: " << current_traj_polamp_gear
           << std::endl;
-      AWARN << "current traj start ind: " << last_trajectory_start_index
+      AWARN << "current traj start ind: " << last_sended_trajectory_start_index
             << std::endl;
-      AWARN << "current traj end ind: " << last_trajectory_end_index
+      AWARN << "current traj end ind: " << last_sended_trajectory_end_index
             << std::endl;
       for (const auto& p : adc_trajectory_pb_polamp.trajectory_point()) {
           AWARN << "point ind: " << debug_current_ind << " "
@@ -826,11 +791,11 @@ bool PlanningComponent::Proc(
   planning_writer_->Write(adc_trajectory_pb);
   //custom changes
   const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
-  double vehicle_x = vehicle_state.x();
-  double vehicle_y = vehicle_state.y();
+  double normalized_vehicle_x = vehicle_state.x();
+  double normalized_vehicle_y = vehicle_state.y();
   AWARN << "vehicle state: "
-        << " x: " << vehicle_x
-        << " y: " << vehicle_y
+        << " x: " << normalized_vehicle_x
+        << " y: " << normalized_vehicle_y
         << std::endl;
   AWARN << "debug A* trajectory: " 
         << adc_trajectory_pb.trajectory_point_size()
