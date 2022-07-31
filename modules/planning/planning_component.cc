@@ -412,13 +412,15 @@ bool PlanningComponent::Proc(
             << "x: " << normalized_vehicle_x << " "
             << "y: " << normalized_vehicle_y
             << std::endl;
+
       // find point on Rl trajectory nearest(distance) to vehicle position
-      std::vector<double> acc_ss;
+      //
+      std::vector<double> point_accumulated_s;
       std::vector<double> ts;
       int index_nearest_point = 0;
       int current_index = 0;
       double nearest_point_t = 0;
-      double nearest_point_acc_s = 0;
+      double nearest_point_accumulated_s = 0;
       double dx_nearest_to_vehicle = polamp_trajectory_info.begin()->x 
                                   - normalized_vehicle_x;
       double dy_nearest_to_vehicle = polamp_trajectory_info.begin()->y 
@@ -434,22 +436,22 @@ bool PlanningComponent::Proc(
       double dy_current_to_vehicle;
       double current_dist_to_vehicle;
       double time_for_step = 0.1;
-      double current_point_t = -time_for_step;
-      double current_point_acc_s = 0;
+      double current_point_time = -time_for_step;
+      double current_point_accumulated_s = 0;
       AWARN << "debug before get nearest_point: " << std::endl;
       AWARN << "last traj start index BEFORE near: " 
             << last_sended_trajectory_start_index << std::endl;
       AWARN << "last traj end index BEFORE near: " 
             << last_sended_trajectory_end_index << std::endl;
       for (auto &it : polamp_trajectory_info) {
-        current_point_t += time_for_step;
+        current_point_time += time_for_step;
         dx_current_to_previous = previous_x - it.x;
         dy_current_to_previous = previous_y - it.y;
         previous_x = it.x;
         previous_y = it.y;
         d_dist = sqrt(dx_current_to_previous * dx_current_to_previous 
                       + dy_current_to_previous * dy_current_to_previous);
-        current_point_acc_s += d_dist;
+        current_point_accumulated_s += d_dist;
         dx_current_to_vehicle = it.x - normalized_vehicle_x;
         dy_current_to_vehicle = it.y - normalized_vehicle_y;
         current_dist_to_vehicle = sqrt(dx_current_to_vehicle 
@@ -457,26 +459,25 @@ bool PlanningComponent::Proc(
                                       + dy_current_to_vehicle 
                                       * dy_current_to_vehicle);
         if (current_index >= last_sended_trajectory_start_index
-            && !(last_sended_trajectory_end_index != -1 
-            && last_sended_trajectory_end_index < current_index)
+            && (last_sended_trajectory_end_index == -1 
+            || current_index <= last_sended_trajectory_end_index)
             && current_index >= index_previous_nearest_point) {
-          if (current_dist_to_vehicle <= nearest_dist) {
-            if (current_dist_to_vehicle < nearest_dist) {
-              nearest_dist = current_dist_to_vehicle;
-              nearest_point_t = current_point_t;
-              nearest_point_acc_s = current_point_acc_s;
-              index_nearest_point = current_index;
+          if (current_dist_to_vehicle < nearest_dist) {
+            nearest_dist = current_dist_to_vehicle;
+            nearest_point_t = current_point_time;
+            nearest_point_accumulated_s = current_point_accumulated_s;
+            index_nearest_point = current_index;
             }
-            else if (index_nearest_point == index_previous_nearest_point) {
-              nearest_dist = current_dist_to_vehicle;
-              nearest_point_t = current_point_t;
-              nearest_point_acc_s = current_point_acc_s;
-              index_nearest_point = current_index;
-            }
+          else if (current_dist_to_vehicle == nearest_dist
+              && index_nearest_point == index_previous_nearest_point) {
+            nearest_dist = current_dist_to_vehicle;
+            nearest_point_t = current_point_time;
+            nearest_point_accumulated_s = current_point_accumulated_s;
+            index_nearest_point = current_index;
           }
         }
-        acc_ss.push_back(current_point_acc_s);
-        ts.push_back(current_point_t);
+        point_accumulated_s.push_back(current_point_accumulated_s);
+        ts.push_back(current_point_time);
         current_index++;
       }
       if (index_nearest_point == index_previous_nearest_point) {
@@ -493,7 +494,7 @@ bool PlanningComponent::Proc(
               != index_nearest_point + 1) {
         index_nearest_point++;
         nearest_point_t = ts[index_nearest_point];
-        nearest_point_acc_s = acc_ss[index_nearest_point];
+        nearest_point_accumulated_s = point_accumulated_s[index_nearest_point];
         count_of_repeat = 0;
       }
       index_previous_nearest_point = index_nearest_point;
@@ -574,7 +575,7 @@ bool PlanningComponent::Proc(
             last_sended_trajectory_end_index = current_ind;
             break;
           }
-          shift_s = acc_ss[current_ind];
+          shift_s = point_accumulated_s[current_ind];
           shift_t = ts[current_ind];
           point_count += current_ind;
           current_polamp_traj = {};
@@ -625,17 +626,17 @@ bool PlanningComponent::Proc(
       adc_trajectory_pb_polamp.set_gear(gear);
       previous_x = current_polamp_traj.begin()->x;
       previous_y = current_polamp_traj.begin()->y;
-      current_point_t = -time_for_step;
-      current_point_acc_s = 0;
+      current_point_time = -time_for_step;
+      current_point_accumulated_s = 0;
       for (auto &it : current_polamp_traj) {
-        current_point_t += time_for_step;
+        current_point_time += time_for_step;
         dx_current_to_previous = previous_x - it.x;
         dy_current_to_previous = previous_y - it.y;
         previous_x = it.x;
         previous_y = it.y;
         d_dist = sqrt(dx_current_to_previous * dx_current_to_previous 
                     + dy_current_to_previous * dy_current_to_previous);
-        current_point_acc_s += d_dist;
+        current_point_accumulated_s += d_dist;
         point_count++;
 
         //DEBUG
@@ -644,8 +645,8 @@ bool PlanningComponent::Proc(
         << " + " << it.x + originFramePointAbsoluteCoordinates.x() - int(it.x + originFramePointAbsoluteCoordinates.x())
         << " y: " << it.y + originFramePointAbsoluteCoordinates.y()
         << " + " << it.y + originFramePointAbsoluteCoordinates.y() - int(it.y + originFramePointAbsoluteCoordinates.y())
-        << " acc_s: " << current_point_acc_s - nearest_point_acc_s + shift_s
-        << " t: " << current_point_t - nearest_point_t + shift_t
+        << " accumulated_s: " << current_point_accumulated_s - nearest_point_accumulated_s + shift_s
+        << " t: " << current_point_time - nearest_point_t + shift_t
         << " gear: " << gears_of_points[point_count - 1]
         << std::endl 
         << " old a: " << it.a << std::endl
@@ -660,8 +661,8 @@ bool PlanningComponent::Proc(
         path_point->set_x(it.x + originFramePointAbsoluteCoordinates.x());
         path_point->set_y(it.y + originFramePointAbsoluteCoordinates.y());
         path_point->set_theta(it.phi);
-        path_point->set_s(kappa_coef * (current_point_acc_s 
-                        - nearest_point_acc_s + shift_s));
+        path_point->set_s(kappa_coef * (current_point_accumulated_s 
+                        - nearest_point_accumulated_s + shift_s));
         path_point->set_kappa(kappa_coef * std::tan(it.steer) / 2.8448);
         if (point_count != int(current_polamp_traj.size())) {
           if (v[point_count] == it.v){
@@ -686,7 +687,7 @@ bool PlanningComponent::Proc(
               << std::endl;
 
         next_traj_point->set_steer(it.steer);
-        next_traj_point->set_relative_time(current_point_t 
+        next_traj_point->set_relative_time(current_point_time 
                                   - nearest_point_t + shift_t);
       }
 
@@ -760,7 +761,7 @@ bool PlanningComponent::Proc(
         path_point->set_x(p.mutable_path_point().x());
         path_point->set_y(p.mutable_path_point().y());
         //path_point->set_theta(it.phi);
-        //path_point->set_s(current_point_acc_s - nearest_point_acc_s);
+        //path_point->set_s(current_point_accumulated_s - nearest_point_accumulated_s);
         //path_point->set_kappa(it.v * std::tan(it.steer) / 2.8448);
         //next_traj_point->set_a(it.a);
         //next_traj_point->set_v(it.v);
