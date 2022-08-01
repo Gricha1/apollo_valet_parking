@@ -56,12 +56,23 @@ class PlanningComponent final
   static int last_sended_trajectory_end_index;
   static int last_sended_trajectory_start_index;
   static int index_previous_nearest_point;
-  static bool current_traj_polamp_gear;
 
   static void MessageCallback_obst(
     const std::shared_ptr<perception::PerceptionObstacles>& msg);
   static void MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg);
+  static void getTrajectoryWithSameGear(
+                      std::vector<point_info>* current_polamp_traj,
+                      bool* current_trajectory_gear,
+                      std::vector<double>* v,
+                      std::vector<double>* a,
+                      double* shift_s,
+                      double* shift_t,
+                      int index_nearest_point,
+                      double time_for_step,
+                      std::vector<double> point_accumulated_s,
+                      std::vector<double> ts,
+                      std::vector<bool> gears_of_points);
   static void SetGearsForTrajectoryPoints(std::vector<bool>* gears_of_points);
   static void GetNearPointToVehicleAndAccumulatedInfo(
                             std::vector<double>* point_accumulated_s,

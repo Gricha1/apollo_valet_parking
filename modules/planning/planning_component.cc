@@ -48,7 +48,6 @@ bool example_updated = false;
 int PlanningComponent::index_previous_nearest_point = -1;
 int PlanningComponent::last_sended_trajectory_end_index = -1;
 int PlanningComponent::last_sended_trajectory_start_index = -1;
-bool PlanningComponent::current_traj_polamp_gear = true;
 std::vector<std::pair<double, double>> PlanningComponent::trajectory = {};
 std::vector<point_info> polamp_trajectory_info = {};
 std::vector<std::pair<double, double>> vector_obsts_position = {};
@@ -452,9 +451,30 @@ bool PlanningComponent::Proc(
       }
       
       // get trajectory with same gear
-      std::vector<double> x;
-      std::vector<double> y;
-      std::vector<double> phi;
+      double shift_s;
+      double shift_t;
+      std::vector<double> v;
+      std::vector<double> a;
+      std::vector<point_info> current_polamp_traj;
+      bool current_trajectory_gear = true;
+      getTrajectoryWithSameGear(&current_polamp_traj,
+                                &current_trajectory_gear,
+                                &v, &a, 
+                                &shift_s, &shift_t,
+                                index_nearest_point,
+                                time_for_step,
+                                point_accumulated_s, ts,
+                                gears_of_points);
+      AWARN << std::endl
+            << "current trajectory size: " << current_polamp_traj.size()
+            << std::endl
+            << "last sended trajectory index: " 
+            << last_sended_trajectory_end_index
+            << std::endl;
+      /*
+      //std::vector<double> x;
+      //std::vector<double> y;
+      //std::vector<double> phi;
       std::vector<double> v;
       std::vector<double> a;
       for (auto &it : polamp_trajectory_info) {
@@ -467,15 +487,14 @@ bool PlanningComponent::Proc(
       int point_count = 0;
       double shift_s;
       double shift_t;
-      std::vector<point_info> current_polamp_traj = {};
       int current_ind = 0;
       bool current_gear;
-      bool prev_gear = true;
-      current_traj_polamp_gear = true;
+      bool previous_gear = true;
+      current_trajectory_gear = true;
       last_sended_trajectory_start_index = 0;
       for (auto &it : polamp_trajectory_info) {
         current_gear = gears_of_points[current_ind];
-        if (current_gear != prev_gear) {
+        if (current_gear != previous_gear) {
           a[current_ind - 1] = - v[current_ind - 1] / time_for_step;
           a[current_ind] += v[current_ind] / time_for_step;
           v[current_ind] = 0;
@@ -488,11 +507,11 @@ bool PlanningComponent::Proc(
           shift_t = ts[current_ind];
           point_count += current_ind;
           current_polamp_traj = {};
-          current_traj_polamp_gear = !current_traj_polamp_gear;
+          current_trajectory_gear = !current_trajectory_gear;
           last_sended_trajectory_start_index = current_ind;
         }
         current_polamp_traj.push_back(it);
-        prev_gear = current_gear;
+        previous_gear = current_gear;
         current_ind++;
       }
       if (int(polamp_trajectory_info.size()) == current_ind) {
@@ -517,13 +536,14 @@ bool PlanningComponent::Proc(
         << std::endl;
         debug_index++;
       }
+      */
 
       // update ADC message info
       ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
       adc_trajectory_pb_polamp.clear_trajectory_point();
       auto gear = canbus::Chassis::GEAR_DRIVE;
       int kappa_coef = 1;
-      if (!current_traj_polamp_gear) {
+      if (!current_trajectory_gear) {
         gear = canbus::Chassis::GEAR_REVERSE;
         kappa_coef = -1;
       }
@@ -535,6 +555,7 @@ bool PlanningComponent::Proc(
       double current_point_time = -time_for_step;
       double current_point_accumulated_s = 0;
       double dist_current_to_previous = 0;
+      int current_index = last_sended_trajectory_start_index;
       for (auto &it : current_polamp_traj) {
         current_point_time += time_for_step;
         dx_current_to_previous = previous_x - it.x;
@@ -544,8 +565,8 @@ bool PlanningComponent::Proc(
         dist_current_to_previous = sqrt(dx_current_to_previous * dx_current_to_previous 
                     + dy_current_to_previous * dy_current_to_previous);
         current_point_accumulated_s += dist_current_to_previous;
-        point_count++;
-        AWARN << "path point: " << point_count - 1
+        current_index++;
+        AWARN << "path point: " << current_index - 1
         << " x: " << it.x + originFramePointAbsoluteCoordinates.x()
         << " + " << it.x + originFramePointAbsoluteCoordinates.x() 
                 - int(it.x + originFramePointAbsoluteCoordinates.x())
@@ -555,12 +576,12 @@ bool PlanningComponent::Proc(
         << " accumulated_s: " << current_point_accumulated_s 
                 - nearest_point_accumulated_s + shift_s
         << " t: " << current_point_time - nearest_point_t + shift_t
-        << " gear: " << gears_of_points[point_count - 1]
+        << " gear: " << gears_of_points[current_index - 1]
         << std::endl 
         << " old a: " << it.a << std::endl
         << " old v: " << it.v << std::endl;
-        it.v = v[point_count - 1];
-        it.a = a[point_count - 1];
+        it.v = v[current_index - 1];
+        it.a = a[current_index - 1];
         auto next_traj_point = adc_trajectory_pb_polamp.add_trajectory_point();
         auto* path_point = next_traj_point->mutable_path_point();
         path_point->set_x(it.x + originFramePointAbsoluteCoordinates.x());
@@ -569,8 +590,8 @@ bool PlanningComponent::Proc(
         path_point->set_s(kappa_coef * (current_point_accumulated_s 
                         - nearest_point_accumulated_s + shift_s));
         path_point->set_kappa(kappa_coef * std::tan(it.steer) / 2.8448);
-        if (point_count != int(current_polamp_traj.size())) {
-          if (v[point_count] == it.v){
+        if (current_index != int(current_polamp_traj.size())) {
+          if (v[current_index] == it.v){
             next_traj_point->set_a(0);
             //DEBUG
             AWARN << " a: " << 0;
@@ -619,17 +640,17 @@ bool PlanningComponent::Proc(
           << std::endl
           << "path points size: "
           << adc_trajectory_pb_polamp.path_point_size()
-          << " gear: " << current_traj_polamp_gear
+          << " gear: " << current_trajectory_gear
           << std::endl;
       AWARN << "current traj start ind: " << last_sended_trajectory_start_index
             << std::endl;
       AWARN << "current traj end ind: " << last_sended_trajectory_end_index
             << std::endl;
-      for (const auto& p : adc_trajectory_pb_polamp.trajectory_point()) {
-          AWARN << "point ind: " << debug_current_ind << " "
-          << p.DebugString();
-          debug_current_ind++;
-      }
+      //for (const auto& p : adc_trajectory_pb_polamp.trajectory_point()) {
+      //    AWARN << "point ind: " << debug_current_ind << " "
+      //    << p.DebugString();
+      //    debug_current_ind++;
+      //}
 
       planning_writer_->Write(adc_trajectory_pb_polamp);
 
@@ -743,6 +764,85 @@ bool PlanningComponent::Proc(
   history->Add(adc_trajectory_pb);
 
   return true;
+}
+
+void PlanningComponent::getTrajectoryWithSameGear(
+                      std::vector<point_info>* current_polamp_traj,
+                      bool* current_trajectory_gear,
+                      std::vector<double>* v,
+                      std::vector<double>* a,
+                      double* shift_s,
+                      double* shift_t,
+                      int index_nearest_point,
+                      double time_for_step,
+                      std::vector<double> point_accumulated_s,
+                      std::vector<double> ts,
+                      std::vector<bool> gears_of_points) {
+  AWARN << std::endl
+        << "DEBUG getTrajectoryWithSameGear"
+        << std::endl
+        << "current polamp traj size: " << current_polamp_traj->size()
+        << std::endl
+        << "nearby point index: " << index_nearest_point
+        << std::endl;
+  for (auto &it : polamp_trajectory_info) {
+    //x.push_back(it.x);
+    //y.push_back(it.y);
+    //phi.push_back(it.phi);
+    v->push_back(it.v);
+    a->push_back(it.a);
+  }
+  int point_count = 0;
+  int current_ind = 0;
+  bool current_gear;
+  bool previous_gear = true;
+  (*current_trajectory_gear) = true;
+  last_sended_trajectory_start_index = 0;
+  for (auto &it : polamp_trajectory_info) {
+    current_gear = gears_of_points[current_ind];
+    if (current_gear != previous_gear) {
+      (*a)[current_ind - 1] = - (*v)[current_ind - 1] / time_for_step;
+      (*a)[current_ind] += (*v)[current_ind] / time_for_step;
+      (*v)[current_ind] = 0;
+      // copy first point of the next trajectory
+      if (current_ind > index_nearest_point) {
+        current_polamp_traj->push_back(it);
+        last_sended_trajectory_end_index = current_ind;
+        break;
+      }
+      (*shift_s) = point_accumulated_s[current_ind];
+      (*shift_t) = ts[current_ind];
+      point_count += current_ind;
+      (*current_polamp_traj) = {};
+      (*current_trajectory_gear) = !(*current_trajectory_gear);
+      last_sended_trajectory_start_index = current_ind;
+    }
+    current_polamp_traj->push_back(it);
+    previous_gear = current_gear;
+    current_ind++;
+  }
+  if (int(polamp_trajectory_info.size()) == current_ind) {
+    last_sended_trajectory_end_index = current_ind - 1;
+    (*a)[current_ind - 2] = - (*v)[current_ind - 2] / time_for_step;
+    (*a)[current_ind - 1] = 0;
+    (*v)[current_ind - 1] = 0;
+  }
+  //int debug_index = 0;
+  //int debug_current_ind = point_count;
+  //for (auto &it : polamp_trajectory_info) {
+  //  AWARN << "second debug path point: " << debug_index
+  //  << " second debug x: " << it.x
+  //  << " y: " << it.y
+    //<< " track: " << debug_tracking_angle[debug_index]
+    //<< " phi: " << phi[debug_index]
+    //<< " norm angle: " 
+    //<< std::abs(common::math::NormalizeAngle(
+    //            debug_tracking_angle[debug_index] 
+    //            - phi[debug_index]))
+  //  << " gear: " << gears_of_points[debug_index]
+  //  << std::endl;
+  //  debug_index++;
+  //}
 }
 
 void PlanningComponent::SetGearsForTrajectoryPoints(std::vector<bool>* gears_of_points){
