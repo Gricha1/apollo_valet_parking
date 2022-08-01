@@ -397,7 +397,10 @@ bool PlanningComponent::Proc(
     if (flag_trajectory) {
       //adc_trajectory_pb.clear_debug();
       (*example_of_adc_trajectory).clear_debug();
+
       // get vehicle normalized state, and origin point(ablosute coordinates)
+      AWARN << std::endl
+            << "DEBUG origin point and vehicle state" << std::endl;
       const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
       double vehicle_x = vehicle_state.x();
       double vehicle_y = vehicle_state.y();
@@ -408,7 +411,8 @@ bool PlanningComponent::Proc(
                     - originFramePointAbsoluteCoordinates.x();
       double normalized_vehicle_y = vehicle_y 
                     - originFramePointAbsoluteCoordinates.y();
-      AWARN << "init vehicle normalized state:" << std::endl
+      AWARN << std::endl
+            << "init vehicle normalized state:" << std::endl
             << "x: " << normalized_vehicle_x << " "
             << "y: " << normalized_vehicle_y
             << std::endl;
@@ -491,6 +495,7 @@ bool PlanningComponent::Proc(
       gears_of_points.push_back(
               gears_of_points[gears_of_points.size() - 1]);
 
+      // get trajectory with same gear
       int point_count = 0;
       double shift_s;
       double shift_t;
@@ -528,7 +533,6 @@ bool PlanningComponent::Proc(
         a[current_ind - 1] = 0;
         v[current_ind - 1] = 0;
       }
-      //DEBUG gears 
       int debug_index = 0;
       int debug_current_ind = point_count;
       for (auto &it : polamp_trajectory_info) {
@@ -546,7 +550,7 @@ bool PlanningComponent::Proc(
         debug_index++;
       }
 
-      //ADCTrajectory& adc_trajectory_pb_polamp = adc_trajectory_pb;
+      // update ADC message info
       ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
       adc_trajectory_pb_polamp.clear_trajectory_point();
       auto gear = canbus::Chassis::GEAR_DRIVE;
@@ -573,8 +577,6 @@ bool PlanningComponent::Proc(
                     + dy_current_to_previous * dy_current_to_previous);
         current_point_accumulated_s += dist_current_to_previous;
         point_count++;
-
-        //DEBUG
         AWARN << "path point: " << point_count - 1
         << " x: " << it.x + originFramePointAbsoluteCoordinates.x()
         << " + " << it.x + originFramePointAbsoluteCoordinates.x() 
@@ -589,11 +591,8 @@ bool PlanningComponent::Proc(
         << std::endl 
         << " old a: " << it.a << std::endl
         << " old v: " << it.v << std::endl;
-
-        //temp_changes: set end(start) traj point vel to zero:
         it.v = v[point_count - 1];
         it.a = a[point_count - 1];
-
         auto next_traj_point = adc_trajectory_pb_polamp.add_trajectory_point();
         auto* path_point = next_traj_point->mutable_path_point();
         path_point->set_x(it.x + originFramePointAbsoluteCoordinates.x());
@@ -645,9 +644,7 @@ bool PlanningComponent::Proc(
             << " + " 
             << normalized_vehicle_y + originFramePointAbsoluteCoordinates.y() - int(normalized_vehicle_y + originFramePointAbsoluteCoordinates.y()) 
             << std::endl;
-
       common::util::FillHeader(node_->Name(), &adc_trajectory_pb_polamp);
-      
       //DEBUG
       AWARN << "current polamp traj size: " 
           << adc_trajectory_pb_polamp.trajectory_point_size()
