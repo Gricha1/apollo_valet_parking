@@ -439,69 +439,18 @@ bool PlanningComponent::Proc(
       index_previous_nearest_point = index_nearest_point;
     
       //set gear for each point in ADCtrajectory
-      // SetGearsForTrajectoryPoints
       std::vector<bool> gears_of_points;
-      //std::vector<double> debug_tracking_angle;
       SetGearsForTrajectoryPoints(&gears_of_points);
       AWARN << std::endl
         << "output points with gear size: " << gears_of_points.size()
         << std::endl;
       for (unsigned i = 0; i < gears_of_points.size(); i++) {
         AWARN << std::endl
-        << "gear: " << gears_of_points[i]
+        << "ind point: " << i 
+        << " gear: " << gears_of_points[i]
         << std::endl;
       }
-      /*
-      for (auto &it : polamp_trajectory_info) {
-        x.push_back(it.x);
-        y.push_back(it.y);
-        phi.push_back(it.phi);
-        v.push_back(it.v);
-        a.push_back(it.a);
-      }
-      size_t horizon = x.size();
-      double heading_angle = phi.front();
-      double tracking_angle;
-      if (x[1] - x[0] != 0) {
-          if (x[1] < x[0]) {
-            tracking_angle = y[1] - y[0] > 0 ? M_PI 
-                  + std::atan((y[1] - y[0]) / (x[1] - x[0]))
-                  : M_PI 
-                  - std::atan((y[1] - y[0]) / (x[1] - x[0]));
-          }
-          else {
-            tracking_angle = std::atan((y[1] - y[0]) / (x[1] - x[0]));
-          }
-      }
-      else {
-        tracking_angle = y[1] - y[0] > 0 ? M_PI_2 : -M_PI_2;
-      }
-      for (size_t i = 0; i < horizon - 1; ++i) {
-        heading_angle = phi[i];
-        if (x[i + 1] - x[i] != 0) {
-          if (x[i + 1] < x[i]) {
-            tracking_angle = y[i + 1] - y[i] > 0 ? M_PI 
-                  + std::atan((y[i + 1] - y[i]) / (x[i + 1] - x[i]))
-                  : -M_PI 
-                  + std::atan((y[i + 1] - y[i]) / (x[i + 1] - x[i]));
-          }
-          else {
-            tracking_angle = std::atan((y[i + 1] - y[i]) / (x[i + 1] - x[i]));
-          }
-        }
-        else {
-          tracking_angle = y[i + 1] - y[i] > 0 ? M_PI_2 : -M_PI_2;
-        }
-        debug_tracking_angle.push_back(tracking_angle);
-        bool gear =
-        std::abs(common::math::NormalizeAngle(tracking_angle - heading_angle)) <
-        (M_PI_2);
-        gears_of_points.push_back(gear);
-      }
-      gears_of_points.push_back(
-              gears_of_points[gears_of_points.size() - 1]);
-      */
-
+      
       // get trajectory with same gear
       std::vector<double> x;
       std::vector<double> y;
