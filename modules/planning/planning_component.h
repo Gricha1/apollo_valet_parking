@@ -61,6 +61,15 @@ class PlanningComponent final
     const std::shared_ptr<perception::PerceptionObstacles>& msg);
   static void MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg);
+  static void UpdateADCMessageInfo(
+                  ADCTrajectory& adc_trajectory_pb_polamp,
+                  std::vector<point_info> current_polamp_traj,
+                  double time_for_step, double shift_s, double shift_t,
+                  double nearest_point_accumulated_s,
+                  double nearest_point_t,
+                  bool current_trajectory_gear,
+                  roi_point originFramePointAbsoluteCoordinates,
+                  std::vector<double> v, std::vector<double> a);
   static void getTrajectoryWithSameGear(
                       std::vector<point_info>* current_polamp_traj,
                       bool* current_trajectory_gear,
