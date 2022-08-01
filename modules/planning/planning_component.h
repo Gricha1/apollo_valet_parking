@@ -62,6 +62,7 @@ class PlanningComponent final
     const std::shared_ptr<perception::PerceptionObstacles>& msg);
   static void MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg);
+  static void SetGearsForTrajectoryPoints(std::vector<bool>* gears_of_points);
   static void GetNearPointToVehicleAndAccumulatedInfo(
                             std::vector<double>* point_accumulated_s,
                             std::vector<double>* ts, int* index_nearest_point,
