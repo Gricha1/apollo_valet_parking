@@ -472,9 +472,7 @@ void OnLanePlanning::RunOnce(
             << " traffic decider failed";
     }
   }
-
-
-  //custom changes
+  
   frame_->polamp_trajectory = {};
   frame_->polamp_ready = flag_trajectory;
   if (frame_->polamp_ready) {
@@ -482,7 +480,6 @@ void OnLanePlanning::RunOnce(
       frame_->polamp_trajectory.push_back(std::make_pair(it->first,
                                                           it->second));
     }
-
     for (auto &it : *polamp_trajectory_info) {
       point_info temp_point;
       temp_point.x = it.x;
@@ -496,17 +493,9 @@ void OnLanePlanning::RunOnce(
   }
 
   status = Plan(start_timestamp, stitching_trajectory, ptr_trajectory_pb);
-  //custom changes UPDATED
-  //if (flag_trajectory) { 
-  //  status = Status::OK();
-  //}
+
   GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
  
-
-  for (const auto& p : ptr_trajectory_pb->trajectory_point()) {
-    //CUSTOM
-    AWARN << p.DebugString();
-  }
   const auto end_system_timestamp =
       std::chrono::duration<double>(
           std::chrono::system_clock::now().time_since_epoch())
@@ -560,7 +549,6 @@ void OnLanePlanning::RunOnce(
     }
   }
 
-  //custom changes
   (*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
 
   const uint32_t n = frame_->SequenceNum();

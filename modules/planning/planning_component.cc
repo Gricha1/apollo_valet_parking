@@ -328,50 +328,13 @@ bool PlanningComponent::Proc(
                           &polamp_trajectory_info);
   AWARN << "planning base Run Once done" << std::endl; 
 
-  /*
-  if (roi_boundaries_pb->point_size() != 0) {
-    roi_point originFramePointAbsoluteCoordinates = roi_boundaries_pb
-                            ->point(roi_boundaries_pb
-                            ->point_size() - 1);
-    unsigned size_obsts = vector_obsts_position.size();
-    for (unsigned i = 0; i < size_obsts; i++) {
-      auto roi_point = roi_boundaries_pb->add_point();
-      roi_point->set_x(vector_obsts_position[i].first - originFramePointAbsoluteCoordinates.x());
-      roi_point->set_y(vector_obsts_position[i].second - originFramePointAbsoluteCoordinates.y());
-      roi_point->set_length(vector_obsts_params[i].first);
-      roi_point->set_width(vector_obsts_params[i].second);
-      roi_point->set_theta(vector_obsts_thetas[i]);
-      roi_point->set_v_x(vector_obsts_velocity[i].first);
-      roi_point->set_v_y(vector_obsts_velocity[i].second);
-      roi_boundaries_pb->set_timestamp(Time::Now().ToNanosecond());
-    }
-
-    AWARN << "debug planning comp AFTER roi point" << std::endl;
-    roi_boundary_writer_->Write(roi_boundaries_pb);
-    AWARN << "debug planning comp AFTER message" << std::endl;
-
-
-    //DEBUG
-    AWARN << " debug obst info: " << roi_boundaries_pb->point_size()
-          << std::endl;
-    for (int i = 0; i < roi_boundaries_pb->point_size(); i++) { 
-      AWARN << " x: " << roi_boundaries_pb->point(i).x()
-            << " y: " << roi_boundaries_pb->point(i).y()
-            << std::endl;
-    }
-  }
-  //roi_boundaries_pb->clear_point();
-  //roi_boundaries_pb->clear_timestamp();
-  */
-
-
-  common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
-  // modify trajectory relative time due to the timestamp change in header
-  auto start_time = adc_trajectory_pb.header().timestamp_sec();
-  const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
-  for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
-    p.set_relative_time(p.relative_time() + dt);
-  }
+  // common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
+  // // modify trajectory relative time due to the timestamp change in header
+  //  auto start_time = adc_trajectory_pb.header().timestamp_sec();
+  //  const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
+  //  for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
+  //    p.set_relative_time(p.relative_time() + dt);
+  // }
 
   if (flag_trajectory && !example_updated) {
     AWARN << "update example" << std::endl;
@@ -379,222 +342,162 @@ bool PlanningComponent::Proc(
     example_updated = true;
   }
 
-  bool debug_a_star = false;
-  /*
-  if (!debug_a_star) {
-    if (roi_boundaries_pb->point_size() > int(size_obsts)) {
-      adc_trajectory_pb.clear_trajectory_point();
-      adc_trajectory_pb.clear_debug();
-    }
-  }
-  */
-  
+  bool get_a_star_trajectory = false;
   AWARN << "flag traj: " << flag_trajectory
         << " updated example: " << example_updated << std::endl;
 
-  if (!debug_a_star) {
-    if (flag_trajectory) {
-      //adc_trajectory_pb.clear_debug();
-      (*example_of_adc_trajectory).clear_debug();
-
-      // get vehicle normalized state, and origin point(ablosute coordinates)
-      AWARN << std::endl
-            << "DEBUG origin point and vehicle state" << std::endl;
-      const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
-      double vehicle_x = vehicle_state.x();
-      double vehicle_y = vehicle_state.y();
-      roi_point originFramePointAbsoluteCoordinates = roi_boundaries_pb
-                            ->point(roi_boundaries_pb
-                            ->point_size() - 1);
-      double normalized_vehicle_x = vehicle_x 
-                    - originFramePointAbsoluteCoordinates.x();
-      double normalized_vehicle_y = vehicle_y 
-                    - originFramePointAbsoluteCoordinates.y();
-      AWARN << std::endl
-            << "init vehicle normalized state:" << std::endl
-            << "x: " << normalized_vehicle_x << " "
-            << "y: " << normalized_vehicle_y
-            << std::endl;
-
-      // find point on Rl trajectory nearest(distance) to vehicle position
-      // and accumulated s, time 
-      double time_for_step = 0.1;
-      std::vector<double> point_accumulated_s;
-      std::vector<double> ts;
-      int index_nearest_point = 0;
-      double nearest_point_t = 0;
-      double nearest_point_accumulated_s = 0;
-      GetNearPointToVehicleAndAccumulatedInfo(&point_accumulated_s,
-                                              &ts, 
-                                              &index_nearest_point,
-                                              &nearest_point_t, 
-                                              &nearest_point_accumulated_s,
-                                              time_for_step, 
-                                              normalized_vehicle_x, normalized_vehicle_y);
-      AWARN << "nearest point index: " << index_nearest_point << std::endl
-            << "nearest point time: " << nearest_point_t << std::endl
-            << "nearest point accumulates s: " << nearest_point_accumulated_s
-            << std::endl;
-      index_previous_nearest_point = index_nearest_point;
-    
-      // set gear for each point in ADCtrajectory
-      std::vector<bool> gears_of_points;
-      SetGearsForTrajectoryPoints(&gears_of_points);
-      AWARN << std::endl
-        << "output points with gear size: " << gears_of_points.size()
-        << std::endl;
-      for (unsigned i = 0; i < gears_of_points.size(); i++) {
-        AWARN << std::endl
-        << "ind point: " << i 
-        << " gear: " << gears_of_points[i]
-        << std::endl;
-      }
-      
-      // get trajectory with same gear
-      double shift_s;
-      double shift_t;
-      std::vector<double> v;
-      std::vector<double> a;
-      std::vector<point_info> current_polamp_traj;
-      bool current_trajectory_gear = true;
-      getTrajectoryWithSameGear(&current_polamp_traj,
-                                &current_trajectory_gear,
-                                &v, &a, 
-                                &shift_s, &shift_t,
-                                index_nearest_point,
-                                time_for_step,
-                                point_accumulated_s, ts,
-                                gears_of_points);
-      AWARN << std::endl
-            << "current trajectory size: " << current_polamp_traj.size()
-            << std::endl
-            << "last sended trajectory index: " 
-            << last_sended_trajectory_end_index
-            << std::endl;
-  
-      // update ADC message info
-      ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
-      UpdateADCMessageInfo(adc_trajectory_pb_polamp,
-                  current_polamp_traj,
-                  time_for_step, shift_s, shift_t,
-                  nearest_point_accumulated_s,
-                  nearest_point_t,
-                  current_trajectory_gear,
-                  originFramePointAbsoluteCoordinates,
-                  v, a);
-  
-      planning_writer_->Write(adc_trajectory_pb_polamp);
-
-      // record in history
-      auto* history = injector_->history();
-      history->Add(adc_trajectory_pb_polamp);
-
-      return true;
-    }
-    else {
-      planning_writer_->Write(adc_trajectory_pb);
-
-      // record in history
-      auto* history = injector_->history();
-      history->Add(adc_trajectory_pb);
-
-      return true;
-    }
-  }
-  //DEBUG
-  AWARN << "it never happens" 
-        << std::endl;
-  
-  /*
-  ADCTrajectory adc_trajectory_test;
-  
-  common::util::FillHeader(node_->Name(), &adc_trajectory_test);
-
-  for (auto &p : adc_trajectory_pb.mutable_trajectory_point()) {
-        auto next_traj_point = adc_trajectory_test.add_trajectory_point();
-        auto* path_point = next_traj_point->mutable_path_point();
-        path_point->set_x(p.mutable_path_point().x());
-        path_point->set_y(p.mutable_path_point().y());
-        //path_point->set_theta(it.phi);
-        //path_point->set_s(current_point_accumulated_s - nearest_point_accumulated_s);
-        //path_point->set_kappa(it.v * std::tan(it.steer) / 2.8448);
-        //next_traj_point->set_a(it.a);
-        //next_traj_point->set_v(it.v);
-        //next_traj_point->set_steer(it.steer);
-        next_traj_point->set_relative_time(p.relative_time());
-        //next_traj_point->set_steer(it.steer);
-        //apollo::common::PathPoint path_point; 
-        //path_point.set_kappa(0);
-        //traj_point->set_allocated_path_point(&path_point);
-  }
-
-  planning_writer_->Write(adc_trajectory_test);
-
-  AWARN << "debug A* trajectory: " 
-        << adc_trajectory_test.trajectory_point_size()
-        << std::endl;
-  for (const auto& p : adc_trajectory_test.trajectory_point()) {
-      //CUSTOM
-      AWARN << p.DebugString();
-  }
-
-  // record in history
-  auto* history = injector_->history();
-  history->Add(adc_trajectory_test);
-  */
-  //adc_trajectory_pb.clear_trajectory_point();
-  
-  planning_writer_->Write(adc_trajectory_pb);
-  //custom changes
-  const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
-  double normalized_vehicle_x = vehicle_state.x();
-  double normalized_vehicle_y = vehicle_state.y();
-  AWARN << "vehicle state: "
-        << " x: " << normalized_vehicle_x
-        << " y: " << normalized_vehicle_y
-        << std::endl;
-  AWARN << "debug A* trajectory: " 
-        << adc_trajectory_pb.trajectory_point_size()
-        << std::endl;
-  AWARN << "traj type: " 
-        << adc_trajectory_pb.trajectory_type()
-        << std::endl;
-  AWARN << adc_trajectory_pb.gear();
-  for (const auto& p : adc_trajectory_pb.trajectory_point()) {
-      //CUSTOM
-      AWARN << p.DebugString();
-  }
-
-  
-  int debug_point_num = 0;
-
-  //DEBUG
-  std::ofstream result ("/apollo/modules/planning/ADC_trajectory.txt", 
-                            std::ios_base::app);
-  if(result.is_open()) {
+  if (get_a_star_trajectory) {
+    auto start_time = adc_trajectory_pb.header().timestamp_sec();
+    common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
+    const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
     for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
-        debug_point_num++;
-        result << "point: " << debug_point_num - 1
-              << " x: " << p.path_point().x() << "  " 
-              << " y: " << p.path_point().y() << "  " 
-              << " theta: " << p.path_point().theta() << "  " 
-              << " kappa: " << p.path_point().kappa() << "  "
-              << " s: " << p.path_point().s() << "  " 
-              << " v: " << p.v() << "  " 
-              << " a: " << p.a() << "  " 
-              << " t: " << p.relative_time() << "\n";
+      p.set_relative_time(p.relative_time() + dt);
     }
-    result << "\n******************************************\n";
-    result.close();
+
+    planning_writer_->Write(adc_trajectory_pb);
+    AWARN << std::endl
+          << "DEBUG A* trajectory:"
+          << std::endl;
+    for (const auto& p : adc_trajectory_pb.trajectory_point()) {
+      AWARN << std::endl
+            << p.DebugString();
+    }
+    
+    // record in history
+    auto* history = injector_->history();
+    history->Add(adc_trajectory_pb);
+
+    return true;
   }
-  else 
-    AINFO << "Unable to open file";
 
-  // record in history
-  auto* history = injector_->history();
-  history->Add(adc_trajectory_pb);
+  if (flag_trajectory) {
+    //(*example_of_adc_trajectory).clear_debug();
+    
+    // get vehicle normalized state, and origin point(ablosute coordinates)
+    AWARN << std::endl
+          << "DEBUG origin point and vehicle state" << std::endl;
+    const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
+    double vehicle_x = vehicle_state.x();
+    double vehicle_y = vehicle_state.y();
+    roi_point originFramePointAbsoluteCoordinates = roi_boundaries_pb
+                          ->point(roi_boundaries_pb
+                          ->point_size() - 1);
+    double normalized_vehicle_x = vehicle_x 
+                  - originFramePointAbsoluteCoordinates.x();
+    double normalized_vehicle_y = vehicle_y 
+                  - originFramePointAbsoluteCoordinates.y();
+    AWARN << std::endl
+          << "init vehicle normalized state:" << std::endl
+          << "x: " << normalized_vehicle_x << " "
+          << "y: " << normalized_vehicle_y
+          << std::endl;
 
-  return true;
+    // find point on Rl trajectory nearest(distance) to vehicle position
+    // and accumulated s, time 
+    double time_for_step = 0.1;
+    std::vector<double> point_accumulated_s;
+    std::vector<double> ts;
+    int index_nearest_point = 0;
+    double nearest_point_t = 0;
+    double nearest_point_accumulated_s = 0;
+    GetNearPointToVehicleAndAccumulatedInfo(&point_accumulated_s,
+                                            &ts, 
+                                            &index_nearest_point,
+                                            &nearest_point_t, 
+                                            &nearest_point_accumulated_s,
+                                            time_for_step, 
+                                            normalized_vehicle_x, normalized_vehicle_y);
+    AWARN << std::endl
+          << "nearest point index: " << index_nearest_point << std::endl
+          << "nearest point time: " << nearest_point_t << std::endl
+          << "nearest point accumulates s: " << nearest_point_accumulated_s
+          << std::endl;
+    index_previous_nearest_point = index_nearest_point;
+  
+    // set gear for each point in ADCtrajectory
+    std::vector<bool> gears_of_points;
+    SetGearsForTrajectoryPoints(&gears_of_points);
+    AWARN << std::endl
+      << "output points with gear size: " << gears_of_points.size()
+      << std::endl;
+    for (unsigned i = 0; i < gears_of_points.size(); i++) {
+      AWARN << std::endl
+      << "ind point: " << i 
+      << " gear: " << gears_of_points[i]
+      << std::endl;
+    }
+    
+    // get trajectory with same gear
+    double shift_s;
+    double shift_t;
+    std::vector<double> v;
+    std::vector<double> a;
+    std::vector<point_info> current_polamp_traj;
+    bool current_trajectory_gear = true;
+    GetTrajectoryWithSameGear(&current_polamp_traj,
+                              &current_trajectory_gear,
+                              &v, &a, 
+                              &shift_s, &shift_t,
+                              index_nearest_point,
+                              time_for_step,
+                              point_accumulated_s, ts,
+                              gears_of_points);
+    AWARN << std::endl
+          << "current trajectory size: " << current_polamp_traj.size()
+          << "current gear: " << current_trajectory_gear
+          << std::endl
+          << "last sended trajectory end index: " 
+          << last_sended_trajectory_end_index
+          << std::endl;
+
+    // update ADC message info
+    //ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
+    ADCTrajectory example_of_adc_trajectory_polamp;
+    ADCTrajectory& adc_trajectory_pb_polamp = example_of_adc_trajectory_polamp;
+    UpdateADCMessageInfo(adc_trajectory_pb_polamp,
+                current_polamp_traj,
+                time_for_step, shift_s, shift_t,
+                nearest_point_accumulated_s,
+                nearest_point_t,
+                current_trajectory_gear,
+                originFramePointAbsoluteCoordinates,
+                v, a);
+    
+
+    auto start_time = adc_trajectory_pb_polamp.header().timestamp_sec();
+    common::util::FillHeader(node_->Name(), &adc_trajectory_pb_polamp);
+    const double dt = start_time - adc_trajectory_pb_polamp.header().timestamp_sec();
+    for (auto& p : *adc_trajectory_pb_polamp.mutable_trajectory_point()) {
+      p.set_relative_time(p.relative_time() + dt);
+    }
+    
+    planning_writer_->Write(adc_trajectory_pb_polamp);
+
+    // record in history
+    auto* history = injector_->history();
+    history->Add(adc_trajectory_pb_polamp);
+
+    return true;
+  }
+  else {
+
+    auto start_time = adc_trajectory_pb.header().timestamp_sec();
+    common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
+    const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
+    for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
+      p.set_relative_time(p.relative_time() + dt);
+    }
+
+    planning_writer_->Write(adc_trajectory_pb);
+
+    // record in history
+    auto* history = injector_->history();
+    history->Add(adc_trajectory_pb);
+
+    return true;
+  }
+  
+
 }
 
 void PlanningComponent::UpdateADCMessageInfo(
@@ -609,7 +512,7 @@ void PlanningComponent::UpdateADCMessageInfo(
   AWARN << std::endl
         << "DEBUG UpdateADCMessageInfo"
         << std::endl
-        << "shift_s: " << shift_s << "shift_t: " << shift_t
+        << "shift_s: " << shift_s << " shift_t: " << shift_t
         << std::endl
         << "nearest point t: " << nearest_point_t
         << "nearest point accumulated s: " << nearest_point_accumulated_s
@@ -664,6 +567,13 @@ void PlanningComponent::UpdateADCMessageInfo(
     path_point->set_s(kappa_coef * (current_point_accumulated_s 
                     - nearest_point_accumulated_s + shift_s));
     path_point->set_kappa(kappa_coef * std::tan(it.steer) / 2.8448);
+    AWARN << std::endl
+          << "norm_x: " << it.x
+          << " norm_y: " << it.y
+          << " theta: " << it.phi
+          << " s: " << kappa_coef * (current_point_accumulated_s 
+                    - nearest_point_accumulated_s + shift_s)
+          << " kappa: " << kappa_coef * std::tan(it.steer) / 2.8448;
     if (current_index != int(current_polamp_traj.size())) {
       if (v[current_index] == it.v){
         next_traj_point->set_a(0);
@@ -724,7 +634,7 @@ void PlanningComponent::UpdateADCMessageInfo(
 
 }
 
-void PlanningComponent::getTrajectoryWithSameGear(
+void PlanningComponent::GetTrajectoryWithSameGear(
                       std::vector<point_info>* current_polamp_traj,
                       bool* current_trajectory_gear,
                       std::vector<double>* v,
@@ -737,10 +647,10 @@ void PlanningComponent::getTrajectoryWithSameGear(
                       std::vector<double> ts,
                       std::vector<bool> gears_of_points) {
   AWARN << std::endl
-        << "DEBUG getTrajectoryWithSameGear"
-        << std::endl
-        << "current trajectory size: " << current_polamp_traj->size()
-        << std::endl
+        << "DEBUG GetTrajectoryWithSameGear"
+        //<< std::endl
+        //<< "current trajectory size before func: " << current_polamp_traj->size()
+        //<< std::endl
         << "nearby point index: " << index_nearest_point
         << std::endl;
   for (auto &it : polamp_trajectory_info) {
@@ -855,11 +765,12 @@ void PlanningComponent::GetNearPointToVehicleAndAccumulatedInfo(
                             double time_for_step, 
                             double normalized_vehicle_x, double normalized_vehicle_y) {
   AWARN << std::endl
-        << "DEBUG func - get nearest point:" << std::endl
+        << "DEBUG GetNearPointToVehicleAndAccumulatedInfo:" << std::endl
         << "time for step: " << time_for_step << std::endl
         << "normalized_vehicle_x: " << normalized_vehicle_x << std::endl
         << "normalized_vehicle_y: " << normalized_vehicle_y << std::endl
-        << "before get nearest_point: " << std::endl
+        << "before get nearest_point: " << index_previous_nearest_point 
+        << std::endl
         << "last traj start index: " 
         << last_sended_trajectory_start_index << std::endl
         << "last traj end index: " 
@@ -927,7 +838,7 @@ void PlanningComponent::GetNearPointToVehicleAndAccumulatedInfo(
   else {
     count_of_repeat = 0;
   }
-  if (count_of_repeat >= 2 
+  if (count_of_repeat >= 1 
       && int(polamp_trajectory_info.size()) 
           != (*index_nearest_point) + 1) {
     (*index_nearest_point) = (*index_nearest_point) + 1;
@@ -936,12 +847,15 @@ void PlanningComponent::GetNearPointToVehicleAndAccumulatedInfo(
     count_of_repeat = 0;
   }
 
-  for (unsigned i = 0; i < point_accumulated_s->size(); i++) {
-    AWARN << std::endl
-          << "accumulated s: " << (*point_accumulated_s)[i]
-          << " accumulated time: " << (*ts)[i]
-          << std::endl;
-  }
+  //for (unsigned i = 0; i < point_accumulated_s->size(); i++) {
+  //  AWARN << std::endl
+  //        << "accumulated s: " << (*point_accumulated_s)[i]
+  //        << " accumulated time: " << (*ts)[i]
+  //        << std::endl;
+  //}
+  AWARN << std::endl
+        << "nearest dist point to vehicle: " << nearest_dist
+        << std::endl;
   return;
 }
 

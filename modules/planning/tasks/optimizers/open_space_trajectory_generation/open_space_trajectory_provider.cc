@@ -87,23 +87,6 @@ Status OpenSpaceTrajectoryProvider::Process() {
   ADEBUG << "trajectory provider";
   auto trajectory_data =
       frame_->mutable_open_space_info()->mutable_stitched_trajectory_result();
-
-
-  //custom change
-  /*
-  AWARN << "provider trajectory size: " 
-        << frame_->polamp_trajectory.size() 
-        << std::endl; //DEBUG
-
-  for (auto &it : frame_->polamp_trajectory) {
-      AWARN << double(it.first) << " " 
-            << double(it.second) << std::endl;  //DEBUG
-  }
-  AWARN << "---------------------";
-  */
-  
-
-
   // generate stop trajectory at park_and_go check_stage
   if (injector_->planning_context()
           ->mutable_planning_status()

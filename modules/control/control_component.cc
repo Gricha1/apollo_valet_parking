@@ -291,10 +291,6 @@ Status ControlComponent::ProduceControlCommand(
 bool ControlComponent::Proc() {
   const auto start_time = Clock::Now();
 
-  //DEBUG
-  AWARN << "control starts: "
-        << std::endl;
-
   chassis_reader_->Observe();
   const auto &chassis_msg = chassis_reader_->GetLatestObserved();
   if (chassis_msg == nullptr) {
@@ -310,12 +306,6 @@ bool ControlComponent::Proc() {
     AERROR << "planning msg is not ready!";
     return false;
   }
-
-  //DEBUG
-  //AINFO << "control trajectory polamp: "
-  //      << trajectory_msg->trajectory_point_size()
-  //      << std::endl;
-  //trajectory_msg->clear_trajectory_point();
 
   OnPlanning(trajectory_msg);
 

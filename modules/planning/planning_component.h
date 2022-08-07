@@ -70,7 +70,7 @@ class PlanningComponent final
                   bool current_trajectory_gear,
                   roi_point originFramePointAbsoluteCoordinates,
                   std::vector<double> v, std::vector<double> a);
-  static void getTrajectoryWithSameGear(
+  static void GetTrajectoryWithSameGear(
                       std::vector<point_info>* current_polamp_traj,
                       bool* current_trajectory_gear,
                       std::vector<double>* v,
