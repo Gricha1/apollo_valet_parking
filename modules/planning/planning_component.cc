@@ -40,7 +40,9 @@ using apollo::relative_map::MapMsg;
 using apollo::routing::RoutingRequest;
 using apollo::routing::RoutingResponse;
 using apollo::storytelling::Stories;
+
 using apollo::cyber::Time;
+using apollo::cyber::Clock;
 
 
 bool PlanningComponent::flag_trajectory = false;
@@ -427,7 +429,7 @@ bool PlanningComponent::Proc(
       << std::endl;
     }
     
-    // get trajectory with same gear
+    // get trajectory with the same gear
     double shift_s;
     double shift_t;
     std::vector<double> v;
@@ -453,6 +455,10 @@ bool PlanningComponent::Proc(
     // update ADC message info
     //ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
     ADCTrajectory example_of_adc_trajectory_polamp;
+    //DEBUG
+    const double start_timestamp = Clock::NowInSeconds();
+    FillPlanningPb(start_timestamp, &example_of_adc_trajectory_polamp);
+    ///////
     ADCTrajectory& adc_trajectory_pb_polamp = example_of_adc_trajectory_polamp;
     UpdateADCMessageInfo(adc_trajectory_pb_polamp,
                 current_polamp_traj,
@@ -500,6 +506,21 @@ bool PlanningComponent::Proc(
 
 }
 
+void PlanningComponent::FillPlanningPb(const double timestamp,
+                                  ADCTrajectory* const trajectory_pb) {
+  trajectory_pb->mutable_header()->set_timestamp_sec(timestamp);
+  if (local_view_.prediction_obstacles->has_header()) {
+    trajectory_pb->mutable_header()->set_lidar_timestamp(
+        local_view_.prediction_obstacles->header().lidar_timestamp());
+    trajectory_pb->mutable_header()->set_camera_timestamp(
+        local_view_.prediction_obstacles->header().camera_timestamp());
+    trajectory_pb->mutable_header()->set_radar_timestamp(
+        local_view_.prediction_obstacles->header().radar_timestamp());
+  }
+  trajectory_pb->mutable_routing_header()->CopyFrom(
+      local_view_.routing->header());
+}
+
 void PlanningComponent::UpdateADCMessageInfo(
                   ADCTrajectory& adc_trajectory_pb_polamp,
                   std::vector<point_info> current_polamp_traj,
@@ -517,6 +538,9 @@ void PlanningComponent::UpdateADCMessageInfo(
         << "nearest point t: " << nearest_point_t
         << "nearest point accumulated s: " << nearest_point_accumulated_s
         << std::endl;
+
+
+
   adc_trajectory_pb_polamp.clear_trajectory_point();
   auto gear = canbus::Chassis::GEAR_DRIVE;
   int kappa_coef = 1;
@@ -595,43 +619,6 @@ void PlanningComponent::UpdateADCMessageInfo(
     next_traj_point->set_relative_time(current_point_time 
                               - nearest_point_t + shift_t);
   }
-  /*
-  //DEBUG
-  AWARN << "nearest index point: "
-        << index_nearest_point
-        << std::endl;
-  AWARN << "nearest index point before current traj: "
-        << index_previous_nearest_point
-        << std::endl;
-  //DEBUG
-  AWARN << "vehicle state: "
-        << " x: " << normalized_vehicle_x + originFramePointAbsoluteCoordinates.x() 
-        << " + " 
-        << normalized_vehicle_x + originFramePointAbsoluteCoordinates.x() - int(normalized_vehicle_x + + originFramePointAbsoluteCoordinates.x())
-        << " y: " << normalized_vehicle_y + + originFramePointAbsoluteCoordinates.y() 
-        << " + " 
-        << normalized_vehicle_y + originFramePointAbsoluteCoordinates.y() - int(normalized_vehicle_y + originFramePointAbsoluteCoordinates.y()) 
-        << std::endl;
-  common::util::FillHeader(node_->Name(), &adc_trajectory_pb_polamp);
-  //DEBUG
-  AWARN << "current polamp traj size: " 
-      << adc_trajectory_pb_polamp.trajectory_point_size()
-      << std::endl
-      << "path points size: "
-      << adc_trajectory_pb_polamp.path_point_size()
-      << " gear: " << current_trajectory_gear
-      << std::endl;
-  AWARN << "current traj start ind: " << last_sended_trajectory_start_index
-        << std::endl;
-  AWARN << "current traj end ind: " << last_sended_trajectory_end_index
-        << std::endl;
-  //for (const auto& p : adc_trajectory_pb_polamp.trajectory_point()) {
-  //    AWARN << "point ind: " << debug_current_ind << " "
-  //    << p.DebugString();
-  //    debug_current_ind++;
-  //}
-  */
-
 }
 
 void PlanningComponent::GetTrajectoryWithSameGear(

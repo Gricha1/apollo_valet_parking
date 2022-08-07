@@ -238,42 +238,6 @@ void OnLanePlanning::GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr
 
 }
 
-  
-  //void OnLanePlanning::GetRoiBoundaries(std::shared_ptr<roi_boundary_message>* ptr_roi_boundaries_pb) {
-  /*
-  ptr_roi_boundaries_pb->clear_trajectory_point();
-
-  TrajectoryPoint tp;
- 
-  for (auto it = frame_->roi_boundary_points.begin(); 
-       it != frame_->roi_boundary_points.end(); it++) {
-    //tp.set_relative_time(t);
-    auto next_point = ptr_roi_boundaries_pb->add_trajectory_point();
-
-    auto* path_point = tp.mutable_path_point();
-    path_point->set_x((*it).x());
-    path_point->set_y((*it).y());
-    path_point->set_theta(0);
-    path_point->set_s(0.0);
-    tp.set_v(0.0);
-    tp.set_a(0.0);
-
-    next_point->CopyFrom(tp);
-  }
-  
-
-  for (auto it = frame_->roi_boundary_points.begin(); 
-       it != frame_->roi_boundary_points.end(); it++) {
-         auto roi_point = (*ptr_roi_boundaries_pb)->add_point();
-         roi_point->set_x((*it).x());
-         roi_point->set_y((*it).y());
-         (*ptr_roi_boundaries_pb)->set_timestamp(Time::Now().ToNanosecond());
-       }
-  }
-  */
-//------------------------------------------------------------------------
-
-
 // TODO(all): fix this! this will cause unexpected behavior from controller
 void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
   ptr_trajectory_pb->clear_trajectory_point();
@@ -297,13 +261,6 @@ void OnLanePlanning::GenerateStopTrajectory(ADCTrajectory* ptr_trajectory_pb) {
   }
 }
 
-
-//void OnLanePlanning::RunOnce(const LocalView& local_view,
-//                             ADCTrajectory* const ptr_trajectory_pb) {
-
-
-
-//custom changes
 void OnLanePlanning::RunOnce(
                 const LocalView& local_view,
                 ADCTrajectory* const ptr_trajectory_pb,
@@ -459,7 +416,6 @@ void OnLanePlanning::RunOnce(
     return;
   }
 
-  //GetRoiBoundaries(ptr_roi_boundaries_pb, &frame_);
 
   for (auto& ref_line_info : *frame_->mutable_reference_line_info()) {
     TrafficDecider traffic_decider;
