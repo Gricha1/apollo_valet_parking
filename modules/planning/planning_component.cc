@@ -454,13 +454,14 @@ bool PlanningComponent::Proc(
 
     // update ADC message info
     //ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
-    ADCTrajectory example_of_adc_trajectory_polamp;
+    //ADCTrajectory example_of_adc_trajectory_polamp;
     //DEBUG
-    const double start_timestamp = Clock::NowInSeconds();
-    FillPlanningPb(start_timestamp, &example_of_adc_trajectory_polamp);
+    //const double start_timestamp = Clock::NowInSeconds();
+    //FillPlanningPb(start_timestamp, &example_of_adc_trajectory_polamp);
     ///////
-    ADCTrajectory& adc_trajectory_pb_polamp = example_of_adc_trajectory_polamp;
-    UpdateADCMessageInfo(adc_trajectory_pb_polamp,
+    ADCTrajectory adc_rl_trajectory;
+    //ADCTrajectory& adc_trajectory_pb_polamp = example_of_adc_trajectory_polamp;
+    UpdateADCMessageInfo(&adc_rl_trajectory,
                 current_polamp_traj,
                 time_for_step, shift_s, shift_t,
                 nearest_point_accumulated_s,
@@ -470,18 +471,18 @@ bool PlanningComponent::Proc(
                 v, a);
     
 
-    auto start_time = adc_trajectory_pb_polamp.header().timestamp_sec();
-    common::util::FillHeader(node_->Name(), &adc_trajectory_pb_polamp);
-    const double dt = start_time - adc_trajectory_pb_polamp.header().timestamp_sec();
-    for (auto& p : *adc_trajectory_pb_polamp.mutable_trajectory_point()) {
+    auto start_time = adc_rl_trajectory.header().timestamp_sec();
+    common::util::FillHeader(node_->Name(), &adc_rl_trajectory);
+    const double dt = start_time - adc_rl_trajectory.header().timestamp_sec();
+    for (auto& p : *adc_rl_trajectory.mutable_trajectory_point()) {
       p.set_relative_time(p.relative_time() + dt);
     }
     
-    planning_writer_->Write(adc_trajectory_pb_polamp);
+    planning_writer_->Write(adc_rl_trajectory);
 
     // record in history
     auto* history = injector_->history();
-    history->Add(adc_trajectory_pb_polamp);
+    history->Add(adc_rl_trajectory);
 
     return true;
   }
@@ -522,7 +523,7 @@ void PlanningComponent::FillPlanningPb(const double timestamp,
 }
 
 void PlanningComponent::UpdateADCMessageInfo(
-                  ADCTrajectory& adc_trajectory_pb_polamp,
+                  ADCTrajectory* adc_trajectory_pb_polamp,
                   std::vector<point_info> current_polamp_traj,
                   double time_for_step, double shift_s, double shift_t,
                   double nearest_point_accumulated_s,
@@ -539,16 +540,16 @@ void PlanningComponent::UpdateADCMessageInfo(
         << "nearest point accumulated s: " << nearest_point_accumulated_s
         << std::endl;
 
-
-
-  adc_trajectory_pb_polamp.clear_trajectory_point();
+  const double start_timestamp = Clock::NowInSeconds();
+  FillPlanningPb(start_timestamp, adc_trajectory_pb_polamp);
+  adc_trajectory_pb_polamp->clear_trajectory_point();
   auto gear = canbus::Chassis::GEAR_DRIVE;
   int kappa_coef = 1;
   if (!current_trajectory_gear) {
     gear = canbus::Chassis::GEAR_REVERSE;
     kappa_coef = -1;
   }
-  adc_trajectory_pb_polamp.set_gear(gear);
+  adc_trajectory_pb_polamp->set_gear(gear);
   double dx_current_to_previous = 0;
   double dy_current_to_previous = 0;
   double previous_x = current_polamp_traj.begin()->x;
@@ -583,7 +584,7 @@ void PlanningComponent::UpdateADCMessageInfo(
     //<< " old v: " << it.v << std::endl;
     it.v = v[current_index - 1];
     it.a = a[current_index - 1];
-    auto next_traj_point = adc_trajectory_pb_polamp.add_trajectory_point();
+    auto next_traj_point = adc_trajectory_pb_polamp->add_trajectory_point();
     auto* path_point = next_traj_point->mutable_path_point();
     path_point->set_x(it.x + originFramePointAbsoluteCoordinates.x());
     path_point->set_y(it.y + originFramePointAbsoluteCoordinates.y());

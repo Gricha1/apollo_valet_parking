@@ -62,37 +62,6 @@ class PlanningComponent final
   static void MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg);
 
-  void FillPlanningPb(const double timestamp,
-                  ADCTrajectory* const trajectory_pb);
-  static void UpdateADCMessageInfo(
-                  ADCTrajectory& adc_trajectory_pb_polamp,
-                  std::vector<point_info> current_polamp_traj,
-                  double time_for_step, double shift_s, double shift_t,
-                  double nearest_point_accumulated_s,
-                  double nearest_point_t,
-                  bool current_trajectory_gear,
-                  roi_point originFramePointAbsoluteCoordinates,
-                  std::vector<double> v, std::vector<double> a);
-  static void GetTrajectoryWithSameGear(
-                      std::vector<point_info>* current_polamp_traj,
-                      bool* current_trajectory_gear,
-                      std::vector<double>* v,
-                      std::vector<double>* a,
-                      double* shift_s,
-                      double* shift_t,
-                      int index_nearest_point,
-                      double time_for_step,
-                      std::vector<double> point_accumulated_s,
-                      std::vector<double> ts,
-                      std::vector<bool> gears_of_points);
-  static void SetGearsForTrajectoryPoints(std::vector<bool>* gears_of_points);
-  static void GetNearPointToVehicleAndAccumulatedInfo(
-                            std::vector<double>* point_accumulated_s,
-                            std::vector<double>* ts, int* index_nearest_point,
-                            double* nearest_point_t, double* nearest_point_accumulated_s,
-                            double time_for_step, 
-                            double normalized_vehicle_x, double normalized_vehicle_y);
-
   bool Init() override;
 
   bool Proc(const std::shared_ptr<prediction::PredictionObstacles>&
@@ -104,6 +73,37 @@ class PlanningComponent final
  private:
   void CheckRerouting();
   bool CheckInput();
+
+  void FillPlanningPb(const double timestamp,
+                  ADCTrajectory* const trajectory_pb);
+  void UpdateADCMessageInfo(
+                  ADCTrajectory* adc_trajectory_pb_polamp,
+                  std::vector<point_info> current_polamp_traj,
+                  double time_for_step, double shift_s, double shift_t,
+                  double nearest_point_accumulated_s,
+                  double nearest_point_t,
+                  bool current_trajectory_gear,
+                  roi_point originFramePointAbsoluteCoordinates,
+                  std::vector<double> v, std::vector<double> a);
+  void GetTrajectoryWithSameGear(
+                      std::vector<point_info>* current_polamp_traj,
+                      bool* current_trajectory_gear,
+                      std::vector<double>* v,
+                      std::vector<double>* a,
+                      double* shift_s,
+                      double* shift_t,
+                      int index_nearest_point,
+                      double time_for_step,
+                      std::vector<double> point_accumulated_s,
+                      std::vector<double> ts,
+                      std::vector<bool> gears_of_points);
+  void SetGearsForTrajectoryPoints(std::vector<bool>* gears_of_points);
+  void GetNearPointToVehicleAndAccumulatedInfo(
+                            std::vector<double>* point_accumulated_s,
+                            std::vector<double>* ts, int* index_nearest_point,
+                            double* nearest_point_t, double* nearest_point_accumulated_s,
+                            double time_for_step, 
+                            double normalized_vehicle_x, double normalized_vehicle_y);
 
  private:
 
