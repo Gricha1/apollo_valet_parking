@@ -60,6 +60,8 @@ struct point_info {
   double a;
   double steer;
   double accumulated_s;
+  double w;
+  double v_s;
 };
 
 /**

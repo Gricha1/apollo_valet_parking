@@ -200,13 +200,11 @@ void PlanningComponent::MessageCallback_obst(
 
 void PlanningComponent::MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg) {
-
   AWARN << "new using message start: " << flag_trajectory;
-  AWARN << "count of points: " << msg->point_size() << std::endl;
+  AWARN << "count of points in RL message: " << msg->point_size() << std::endl;
   for (int i = 0; i < msg->point_size(); i++) {
     trajectory.push_back(std::make_pair<double,double> 
                 (msg->point(i).x(), msg->point(i).y()));
-    //update info of polamp trajectory
     point_info temp_point;
     temp_point.x = msg->point(i).x();
     temp_point.y = msg->point(i).y();
@@ -214,13 +212,9 @@ void PlanningComponent::MessageCallback(
     temp_point.v = msg->point(i).v();
     temp_point.a = msg->point(i).a();
     temp_point.steer = msg->point(i).steer();
+    temp_point.w = msg->point(i).w();
+    temp_point.v_s = msg->point(i).v_s();
     polamp_trajectory_info.push_back(temp_point);
-
-    /*
-    //delete !!!
-    delete_polamp.push_back(temp_point);
-    */
-    
   }
 
   
@@ -453,14 +447,7 @@ bool PlanningComponent::Proc(
           << std::endl;
 
     // update ADC message info
-    //ADCTrajectory& adc_trajectory_pb_polamp = *example_of_adc_trajectory;
-    //ADCTrajectory example_of_adc_trajectory_polamp;
-    //DEBUG
-    //const double start_timestamp = Clock::NowInSeconds();
-    //FillPlanningPb(start_timestamp, &example_of_adc_trajectory_polamp);
-    ///////
     ADCTrajectory adc_rl_trajectory;
-    //ADCTrajectory& adc_trajectory_pb_polamp = example_of_adc_trajectory_polamp;
     UpdateADCMessageInfo(&adc_rl_trajectory,
                 current_polamp_traj,
                 time_for_step, shift_s, shift_t,
@@ -530,7 +517,7 @@ void PlanningComponent::UpdateADCMessageInfo(
                   double nearest_point_t,
                   bool current_trajectory_gear,
                   roi_point originFramePointAbsoluteCoordinates,
-                  std::vector<double> v, std::vector<double> a){
+                  std::vector<double> v, std::vector<double> a) {
   AWARN << std::endl
         << "DEBUG UpdateADCMessageInfo"
         << std::endl
@@ -558,6 +545,7 @@ void PlanningComponent::UpdateADCMessageInfo(
   double current_point_accumulated_s = 0;
   double dist_current_to_previous = 0;
   int current_index = last_sended_trajectory_start_index;
+  static constexpr double kEpsilon = 1e-6;
   for (auto &it : current_polamp_traj) {
     current_point_time += time_for_step;
     dx_current_to_previous = previous_x - it.x;
@@ -591,7 +579,13 @@ void PlanningComponent::UpdateADCMessageInfo(
     path_point->set_theta(it.phi);
     path_point->set_s(kappa_coef * (current_point_accumulated_s 
                     - nearest_point_accumulated_s + shift_s));
-    path_point->set_kappa(kappa_coef * std::tan(it.steer) / 2.8448);
+    //path_point->set_kappa(kappa_coef * std::tan(it.steer) / 2.8448);
+    if (it.v < kEpsilon) {
+      path_point->set_kappa(0.0);
+    }
+    else {
+      path_point->set_kappa(kappa_coef * (it.w / it.v));
+    }
     AWARN << std::endl
           << "norm_x: " << it.x
           << " norm_y: " << it.y
@@ -826,14 +820,14 @@ void PlanningComponent::GetNearPointToVehicleAndAccumulatedInfo(
   else {
     count_of_repeat = 0;
   }
-  if (count_of_repeat >= 1 
-      && int(polamp_trajectory_info.size()) 
-          != (*index_nearest_point) + 1) {
-    (*index_nearest_point) = (*index_nearest_point) + 1;
-    (*nearest_point_t) = (*ts)[(*index_nearest_point)];
-    (*nearest_point_accumulated_s) = (*point_accumulated_s)[(*index_nearest_point)];
-    count_of_repeat = 0;
-  }
+  // if (count_of_repeat >= 1 
+  //     && int(polamp_trajectory_info.size()) 
+  //         != (*index_nearest_point) + 1) {
+  //   (*index_nearest_point) = (*index_nearest_point) + 1;
+  //   (*nearest_point_t) = (*ts)[(*index_nearest_point)];
+  //   (*nearest_point_accumulated_s) = (*point_accumulated_s)[(*index_nearest_point)];
+  //   count_of_repeat = 0;
+  // }
 
   //for (unsigned i = 0; i < point_accumulated_s->size(); i++) {
   //  AWARN << std::endl

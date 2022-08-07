@@ -53,6 +53,8 @@ message roi_point {
   optional double theta = 10;
   optional double v_x = 11;
   optional double v_y = 12;
+  optional double w = 13;
+  optional double v_s = 14;
 }
 
 message roi_boundary_message {
