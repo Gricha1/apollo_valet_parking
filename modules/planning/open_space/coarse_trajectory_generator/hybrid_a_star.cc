@@ -730,6 +730,20 @@ bool HybridAStar::Plan(
     const std::vector<std::vector<common::math::Vec2d>>& obstacles_vertices_vec,
     HybridAStartResult* result) {
 
+  
+  //DEBUG vehicle
+  AWARN << std::endl
+        << "DEBUG a start vehicle params"
+        << std::endl
+        << "base: " << vehicle_param_.wheel_base()
+        << " length: " << vehicle_param_.length()
+        << " width: " << vehicle_param_.width()
+        << std::endl
+        << "brake_deadzone: " << vehicle_param_.brake_deadzone()
+        << " throttle_deadzone: " << vehicle_param_.throttle_deadzone()
+        << std::endl;
+  /////// 
+
 
   // clear containers
   open_set_.clear();
@@ -815,7 +829,7 @@ bool HybridAStar::Plan(
         const double end_time = Clock::NowInSeconds();
         heuristic_time += end_time - start_time;
         //-------------------------ДОБАВКА-------------------------
-        next_node->SetHeuCost(0);
+        //next_node->SetHeuCost(0);
 
         
         //-----------------------------------

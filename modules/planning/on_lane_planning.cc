@@ -369,11 +369,6 @@ void OnLanePlanning::RunOnce(
 
   status = InitFrame(frame_num, stitching_trajectory.back(), vehicle_state);
   
-  //custom changes: UPDATED
-  //if (flag_trajectory) {
-  //  status = Status::OK();
-  //}
-
   if (status.ok()) {
     injector_->ego_info()->CalculateFrontObstacleClearDistance(
         frame_->obstacles());
@@ -505,7 +500,7 @@ void OnLanePlanning::RunOnce(
     }
   }
 
-  (*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
+  //(*roi_boundary_writer_)->Write(*ptr_roi_boundaries_pb);
 
   const uint32_t n = frame_->SequenceNum();
   injector_->frame_history()->Add(n, std::move(frame_));

@@ -112,7 +112,7 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
   std::vector<point_info> polamp_trajectory;
   std::vector<std::pair<double, double>> traj_to_vector = {};
   
-  bool debug_a_star = false;
+  bool debug_a_star = true;
 
   if (!debug_a_star) {    
     if (frame->polamp_ready) {
@@ -151,7 +151,7 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
   Eigen::MatrixXd dual_n_result_ds;
 
   //DEBUG
-  FLAGS_enable_parallel_trajectory_smoothing = true;
+  //FLAGS_enable_parallel_trajectory_smoothing = true;
   
   if (FLAGS_enable_parallel_trajectory_smoothing) {
     std::vector<HybridAStartResult> partition_trajectories;
@@ -161,17 +161,6 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
 
     AWARN << "first flag = true" << std::endl;
 
-    
-    //DEBUG
-    /*
-    if ((abs( (polamp_trajectory.begin())->x - result.x[0] ) < 0.5) &&
-        (abs( (polamp_trajectory.begin())->y - result.y[0] ) < 0.5)) {
-          partition_trajectories.pop_back();
-        }
-    */
-
-    //DEBUG
-    //unsigned index = 0;
     AWARN << "partitioned trajectories: "
           << partition_trajectories.size()
           << std::endl;
@@ -290,14 +279,6 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
         AINFO << "ending point: "
               << xWS_vec[i].col(xWS_vec[i].cols() - 1).transpose();
               
-        //------------------------Добавка-----------------------
-        AERROR << "trajectory id: " << i;
-        AERROR << "trajectory partitioned size: " << xWS_vec[i].cols();
-        AERROR << "initial point: " << xWS_vec[i].col(0).transpose();
-        AERROR << "ending point: "
-              << xWS_vec[i].col(xWS_vec[i].cols() - 1).transpose();
-              
-        //------------------------------------------------------
       }
 
       Eigen::MatrixXd last_time_u(2, 1);
@@ -318,7 +299,7 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
       const auto smoother_start_timestamp = std::chrono::system_clock::now();
       
       //DEBUG
-      FLAGS_use_iterative_anchoring_smoother = false;
+      //FLAGS_use_iterative_anchoring_smoother = false;
 
       if (FLAGS_use_iterative_anchoring_smoother) {
 

@@ -315,30 +315,21 @@ bool PlanningComponent::Proc(
           << std::endl;
   }
 
-  AWARN << "planning base Run Once" << std::endl;
   planning_base_->RunOnce(local_view_, &adc_trajectory_pb, 
                           &roi_boundaries_pb,
                           &roi_boundary_writer_,
                           flag_trajectory,
                           &trajectory,
                           &polamp_trajectory_info);
-  AWARN << "planning base Run Once done" << std::endl; 
 
-  // common::util::FillHeader(node_->Name(), &adc_trajectory_pb);
-  // // modify trajectory relative time due to the timestamp change in header
-  //  auto start_time = adc_trajectory_pb.header().timestamp_sec();
-  //  const double dt = start_time - adc_trajectory_pb.header().timestamp_sec();
-  //  for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
-  //    p.set_relative_time(p.relative_time() + dt);
-  // }
-
+  roi_boundary_writer_->Write(roi_boundaries_pb);
   if (flag_trajectory && !example_updated) {
     AWARN << "update example" << std::endl;
     example_of_adc_trajectory = &adc_trajectory_pb;
     example_updated = true;
   }
 
-  bool get_a_star_trajectory = false;
+  bool get_a_star_trajectory = true;
   AWARN << "flag traj: " << flag_trajectory
         << " updated example: " << example_updated << std::endl;
 
@@ -556,20 +547,6 @@ void PlanningComponent::UpdateADCMessageInfo(
                 + dy_current_to_previous * dy_current_to_previous);
     current_point_accumulated_s += dist_current_to_previous;
     current_index++;
-    //AWARN << "path point: " << current_index - 1
-    //<< " x: " << it.x + originFramePointAbsoluteCoordinates.x()
-    //<< " + " << it.x + originFramePointAbsoluteCoordinates.x() 
-    //        - int(it.x + originFramePointAbsoluteCoordinates.x())
-    //<< " y: " << it.y + originFramePointAbsoluteCoordinates.y()
-    //<< " + " << it.y + originFramePointAbsoluteCoordinates.y() 
-    //        - int(it.y + originFramePointAbsoluteCoordinates.y())
-    //<< " accumulated_s: " << current_point_accumulated_s 
-    //        - nearest_point_accumulated_s + shift_s
-    //<< " t: " << current_point_time - nearest_point_t + shift_t
-    //<< " gear: " << gears_of_points[current_index - 1]
-    //<< std::endl 
-    //<< " old a: " << it.a << std::endl
-    //<< " old v: " << it.v << std::endl;
     it.v = v[current_index - 1];
     it.a = a[current_index - 1];
     auto next_traj_point = adc_trajectory_pb_polamp->add_trajectory_point();
@@ -584,7 +561,8 @@ void PlanningComponent::UpdateADCMessageInfo(
       path_point->set_kappa(0.0);
     }
     else {
-      path_point->set_kappa(kappa_coef * (it.w / it.v));
+      //path_point->set_kappa(kappa_coef * (it.w / it.v));
+      path_point->set_kappa(it.w / it.v);
     }
     AWARN << std::endl
           << "norm_x: " << it.x
