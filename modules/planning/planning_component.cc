@@ -329,7 +329,7 @@ bool PlanningComponent::Proc(
     example_updated = true;
   }
 
-  bool get_a_star_trajectory = true;
+  bool get_a_star_trajectory = false;
   AWARN << "flag traj: " << flag_trajectory
         << " updated example: " << example_updated << std::endl;
 

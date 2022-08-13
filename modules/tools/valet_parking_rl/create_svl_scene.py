@@ -11,7 +11,6 @@ from modules.planning.proto.planning_pb2 import roi_boundary_message
 
 
 class POLAMP_ready_reader:
-
     def __init__(self):
         cyber.init()
         self.node = cyber.Node("PythonAPI_POLAMP_listener")
@@ -25,7 +24,6 @@ class POLAMP_ready_reader:
         self.ready_create_car = True
 
 class ROI_boundary_ready_reader:
-
     def __init__(self):
         cyber.init()
         self.node = cyber.Node("PythonAPI_RoiBoundary_listener")
@@ -54,9 +52,6 @@ if args.dynamic == True:
     dynamic = True
 
 ego = lgsvl.wise.DefaultAssets.ego_lincoln2017mkz_apollo5_full_analysis
-#map = "95088a4f-4dbc-49b8-b7c8-b781d060de52"
-#map = "736709ef-8a65-46e2-ae32-d564cf5753b8"
-#map = "08a90728-c32c-40b2-ac51-d065b31f5aab"
 if args.map == "test":
     map = "95088a4f-4dbc-49b8-b7c8-b781d060de52"
 elif args.map == "parking_lot":
@@ -80,7 +75,6 @@ vehicle_id = "70f2a06e-2b44-45bb-a6d7-d1d1b8813bcc"
 spawns = sim.get_spawn()
 egoState = lgsvl.AgentState()
 egoState.transform = spawns[0]
-#print (spawns[0].rotation.y)
 ego = sim.add_agent(vehicle_id, lgsvl.AgentType.EGO, egoState)
 ego.connect_bridge(BRIDGE_HOST, BRIDGE_PORT)
 right = lgsvl.utils.transform_to_right(egoState.transform)

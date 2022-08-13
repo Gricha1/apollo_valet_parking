@@ -112,7 +112,7 @@ Status OpenSpaceTrajectoryOptimizer::Plan(
   std::vector<point_info> polamp_trajectory;
   std::vector<std::pair<double, double>> traj_to_vector = {};
   
-  bool debug_a_star = true;
+  bool debug_a_star = false;
 
   if (!debug_a_star) {    
     if (frame->polamp_ready) {

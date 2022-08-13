@@ -5,13 +5,44 @@ from cyber.python.cyber_py3 import cyber, cyber_time
 import math
 import time
 import os
+import argparse
 from modules.routing.proto.routing_pb2 import RoutingRequest, LaneWaypoint
 from modules.perception.proto.perception_obstacle_pb2 import PerceptionObstacle, PerceptionObstacles
+from modules.planning.proto.planning_pb2 import roi_boundary_message
 
-class PythonApolloInterface:
+parser = argparse.ArgumentParser(description='Get max steps for validation')
+parser.add_argument('-max_steps', '--max_steps', type=int, 
+                    help='max_steps = steps in env')
+parser.add_argument('-map', '--map')
+parser.add_argument('-parking_place', '--parking_place', type=int)
+args = parser.parse_args()
+
+class ApolloRLInterface:
     def __init__(self):
         cyber.init()
-        self.node = cyber.Node("obst_python_apollo_interface")
+        self.node = cyber.Node("rl_trajectory_check_interface")
+        self.reader = self.node.create_reader('from_python_to_apollo', 
+                                    roi_boundary_message, self.callback)
+        self.is_rl_trajectory_ready = False
+
+    def callback(self, data):
+        self.is_rl_trajectory_ready = True
+
+class ApolloStageManagerInterface:
+    def __init__(self):
+        cyber.init()
+        self.node = cyber.Node("stage_check_interface")
+        self.reader = self.node.create_reader('get_roi_boundaries_topic', 
+                                    roi_boundary_message, self.callback)
+        self.is_parking_approuch_end = False
+
+    def callback(self, data):
+        self.is_parking_approuch_end = True
+
+class ApolloValetParkingRequestInterface:
+    def __init__(self):
+        cyber.init()
+        self.node = cyber.Node("obst_apollo_interface")
         self.routing_writer = self.node.create_writer('/apollo/routing_request', 
                                                     RoutingRequest)
         self.obstacle_writer = self.node.create_writer('/apollo/perception/obstacles', 
@@ -77,8 +108,9 @@ def setDynamicPositionAndMsgInfo(obstacle,
     obstacle.timestamp = time.time()
     
 if __name__ == '__main__':
-    apollo_interface = PythonApolloInterface()
-    seq = 0
+    apollo_valet_parking_request_interface = ApolloValetParkingRequestInterface()
+    apollo_stage_manager_interface = ApolloStageManagerInterface()
+    apollo_rl_interface = ApolloRLInterface()
     current_dyn_x = 388998.19
     current_dyn_y = 221211.71
     current_dyn_theta = math.pi # radians
@@ -86,22 +118,25 @@ if __name__ == '__main__':
     time_step = 0.1
     step_distance = time_step * first_dyn_speed
     start_time = cyber_time.Time.now().to_sec()
+    seq = 0
     while not cyber.is_shutdown():
-        msg = PerceptionObstacles()
-        msg.header.module_name = 'perception_obstacle'
-        msg.header.sequence_num = seq
-        msg.header.timestamp_sec = cyber_time.Time.now().to_sec()
-        msg.header.lidar_timestamp = cyber_time.Time.now().to_nsec()
-        seq = seq + 1
-        obstacle = msg.perception_obstacle.add()
-        setDynamicPositionAndMsgInfo(obstacle, 
-                current_dyn_x, current_dyn_y, 
-                current_dyn_theta, step_distance)
-        current_dyn_x = obstacle.position.x 
-        current_dyn_y = obstacle.position.y
-        tracking_time = obstacle.tracking_time
-        time.sleep(time_step)
-        apollo_interface.obstacle_writer.write(msg)
+        if apollo_stage_manager_interface.is_parking_approuch_end and \
+            apollo_rl_interface.is_rl_trajectory_ready:
+            msg = PerceptionObstacles()
+            msg.header.module_name = 'perception_obstacle'
+            msg.header.sequence_num = seq
+            msg.header.timestamp_sec = cyber_time.Time.now().to_sec()
+            msg.header.lidar_timestamp = cyber_time.Time.now().to_nsec()
+            seq = seq + 1
+            obstacle = msg.perception_obstacle.add()
+            setDynamicPositionAndMsgInfo(obstacle, 
+                    current_dyn_x, current_dyn_y, 
+                    current_dyn_theta, step_distance)
+            current_dyn_x = obstacle.position.x 
+            current_dyn_y = obstacle.position.y
+            tracking_time = obstacle.tracking_time
+            time.sleep(time_step)
+            apollo_valet_parking_request_interface.obstacle_writer.write(msg)
 
 
    
