@@ -11,10 +11,9 @@ from modules.perception.proto.perception_obstacle_pb2 import PerceptionObstacle,
 from modules.planning.proto.planning_pb2 import roi_boundary_message
 
 parser = argparse.ArgumentParser(description='Get max steps for validation')
-parser.add_argument('-max_steps', '--max_steps', type=int, 
-                    help='max_steps = steps in env')
 parser.add_argument('-map', '--map')
 parser.add_argument('-parking_place', '--parking_place', type=int)
+parser.add_argument('-test_case', '--test_case', type=int)
 args = parser.parse_args()
 
 class ApolloRLInterface:
@@ -111,36 +110,83 @@ if __name__ == '__main__':
     apollo_valet_parking_request_interface = ApolloValetParkingRequestInterface()
     apollo_stage_manager_interface = ApolloStageManagerInterface()
     apollo_rl_interface = ApolloRLInterface()
-    current_dyn_x = 388998.19
-    current_dyn_y = 221211.71
-    current_dyn_theta = math.pi # radians
-    first_dyn_speed = 0.5 # m/s
+    if args.map == "test": # тестовые 10 парковочных мест
+        x_start = 388929.22559400817
+        y_start = 221208.13388718164
+        x_end = 389028.85093914089
+        y_end = 221208.13388718164
+        if args.parking_place == 1:
+            center_parkin_place_x = 388959.08
+            center_parkin_place_y = 221201.40
+            number_of_place = 1
+        elif args.parking_place == 2:
+            center_parkin_place_x = 388964.21
+            center_parkin_place_y = 221201.40
+            number_of_place = 2
+        elif args.parking_place == 3:
+            center_parkin_place_x = 388969.19
+            center_parkin_place_y = 221201.40
+            number_of_place = 3
+        elif args.parking_place == 5:
+            center_parkin_place_x = 388979.21
+            center_parkin_place_y = 221201.40
+            number_of_place = 5
+        elif args.parking_place == 6:
+            center_parkin_place_x = 388984.21
+            center_parkin_place_y = 221201.40
+            number_of_place = 6
+        elif args.parking_place == 7:
+            center_parkin_place_x = 388989.21
+            center_parkin_place_y = 221201.40
+            number_of_place = 7
+    if args.test_case == 1:
+        pass
+    if args.test_case == 2:
+        pass
+    if args.test_case == 3:
+        pass
+    if args.test_case == 4:
+        pass
+    elif args.test_case == 5:
+        current_dyn_x = center_parkin_place_x + 14
+        current_dyn_y = center_parkin_place_y + 7.8
+        current_dyn_theta = math.pi # radians
+        first_dyn_speed = 0.5 # m/s
+    elif args.test_case == 6:
+        current_dyn_x = center_parkin_place_x + 14
+        current_dyn_y = center_parkin_place_y + 4.5
+        current_dyn_theta = math.pi # radians
+        first_dyn_speed = 0.5 # m/s
+    else:
+        current_dyn_x = 388998.19
+        current_dyn_y = 221211.71
+        current_dyn_theta = math.pi # radians
+        first_dyn_speed = 0.5 # m/s
     time_step = 0.1
     step_distance = time_step * first_dyn_speed
     start_time = cyber_time.Time.now().to_sec()
     seq = 0
     while not cyber.is_shutdown():
-        if apollo_stage_manager_interface.is_parking_approuch_end and \
-            apollo_rl_interface.is_rl_trajectory_ready:
+        if apollo_stage_manager_interface.is_parking_approuch_end:
             msg = PerceptionObstacles()
             msg.header.module_name = 'perception_obstacle'
             msg.header.sequence_num = seq
             msg.header.timestamp_sec = cyber_time.Time.now().to_sec()
             msg.header.lidar_timestamp = cyber_time.Time.now().to_nsec()
             seq = seq + 1
-            obstacle = msg.perception_obstacle.add()
-            setDynamicPositionAndMsgInfo(obstacle, 
+            dyn_obstacle = msg.perception_obstacle.add()
+            setDynamicPositionAndMsgInfo(dyn_obstacle, 
                     current_dyn_x, current_dyn_y, 
                     current_dyn_theta, step_distance)
-            current_dyn_x = obstacle.position.x 
-            current_dyn_y = obstacle.position.y
-            tracking_time = obstacle.tracking_time
+            current_dyn_x = dyn_obstacle.position.x 
+            current_dyn_y = dyn_obstacle.position.y
+            tracking_time = dyn_obstacle.tracking_time
             time.sleep(time_step)
             apollo_valet_parking_request_interface.obstacle_writer.write(msg)
 
 
-   
-   
+
+
    
    
    

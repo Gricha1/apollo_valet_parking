@@ -118,13 +118,13 @@ class RoiWriter:
 														roi_boundary_message)
 
 class RoiReader:
-	def __init__(self, polamp_trajectory_writer):
+	def __init__(self, rl_trajectory_writer):
 		cyber.init()
 		self.node = cyber.Node("listener")
 		self.reader = self.node.create_reader('get_roi_boundaries_topic', 
 										roi_boundary_message, self.callback)
 		self.j = 0
-		self.polamp_trajectory_writer = polamp_trajectory_writer
+		self.rl_trajectory_writer = rl_trajectory_writer
 		self.missed_count = 0
 		self.get_a_star_trajectory= False
 
@@ -138,7 +138,7 @@ class RoiReader:
 			print("DEBUG A* trajectory")
 			trajectory_msg = roi_boundary_message()
 			trajectory_msg.timestamp = int(time.time() * 10 ** 7)
-			self.polamp_trajectory_writer.trajectory_writer.write(trajectory_msg)
+			self.rl_trajectory_writer.trajectory_writer.write(trajectory_msg)
 			return
 
 		self.j += 1
@@ -201,7 +201,7 @@ class RoiReader:
 			end_time_get_trajectory = time.time()
 			print("time for geting trajectory in Python:", 
 					end_time_get_trajectory - start_time_get_trajectory)
-			self.polamp_trajectory_writer.trajectory_writer.write(trajectory_msg)
+			self.rl_trajectory_writer.trajectory_writer.write(trajectory_msg)
 			
 		return
 			
@@ -210,8 +210,8 @@ if __name__ == "__main__":
 	second_req_sent = False
 	parking_req_sent = False
 	start_time = cyber_time.Time.now().to_sec()
-	polamp_trajectory_writer = RoiWriter()
-	roi_boundary_reader = RoiReader(polamp_trajectory_writer)
+	rl_trajectory_writer = RoiWriter()
+	roi_boundary_reader = RoiReader(rl_trajectory_writer)
 	if args.get_a_star_trajectory:
 		roi_boundary_reader.get_a_star_trajectory = True
 	while not cyber.is_shutdown():
@@ -252,8 +252,6 @@ if __name__ == "__main__":
 					number_of_place = 7
 			elif args.map == "parking_lot":
 				#паркинг лот с одним местом
-				#x_start = 388974
-				#y_start = 221155
 				x_start = 389049.52
 				y_start = 221176.54
 				number_of_place = args.number_of_place

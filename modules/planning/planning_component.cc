@@ -162,7 +162,7 @@ void PlanningComponent::MessageCallback_obst(
   vector_obsts_params = {};
   vector_obsts_thetas = {};
   vector_obsts_velocity = {};
-  //custom changes: add dynamic, static obst info
+  // add dynamic obst info
   for (auto& it : msg->perception_obstacle()) {
     vector_obsts_position.push_back(std::make_pair<double, double> 
                 (it.position().x(), it.position().y()));
@@ -196,7 +196,6 @@ void PlanningComponent::MessageCallback_obst(
           << std::endl;
   }
 }
-
 
 void PlanningComponent::MessageCallback(
     const std::shared_ptr<roi_boundary_message>& msg) {
@@ -292,12 +291,10 @@ bool PlanningComponent::Proc(
     return true;
   }
 
-  ADCTrajectory adc_trajectory_pb;
-
-  auto roi_boundaries_pb = std::make_shared<roi_boundary_message>();
+  auto dynamic_static_obsts_pb = std::make_shared<roi_boundary_message>();
   unsigned size_obsts = vector_obsts_position.size();
   for (unsigned i = 0; i < size_obsts; i++) {
-    auto roi_point = roi_boundaries_pb->add_point();
+    auto roi_point = dynamic_static_obsts_pb->add_point();
     roi_point->set_x(vector_obsts_position[i].first);
     roi_point->set_y(vector_obsts_position[i].second);
     roi_point->set_length(vector_obsts_params[i].first);
@@ -305,24 +302,29 @@ bool PlanningComponent::Proc(
     roi_point->set_theta(vector_obsts_thetas[i]);
     roi_point->set_v_x(vector_obsts_velocity[i].first);
     roi_point->set_v_y(vector_obsts_velocity[i].second);
-    roi_boundaries_pb->set_timestamp(Time::Now().ToNanosecond());
+    dynamic_static_obsts_pb->set_timestamp(Time::Now().ToNanosecond());
   }
-  AWARN << " debug obst info: " << roi_boundaries_pb->point_size()
+  AWARN << "dynamic obst info: " << dynamic_static_obsts_pb->point_size()
         << std::endl;
-  for (int i = 0; i < roi_boundaries_pb->point_size(); i++) { 
-    AWARN << " x: " << roi_boundaries_pb->point(i).x()
-          << " y: " << roi_boundaries_pb->point(i).y()
+  for (int i = 0; i < dynamic_static_obsts_pb->point_size(); i++) { 
+    AWARN << std::endl
+          << " x: " << dynamic_static_obsts_pb->point(i).x()
+          << " y: " << dynamic_static_obsts_pb->point(i).y()
+          << " theta: " << dynamic_static_obsts_pb->point(i).theta()
+          << " v_x: " << dynamic_static_obsts_pb->point(i).v_x()
+          << " v_y: " << dynamic_static_obsts_pb->point(i).v_y()
           << std::endl;
   }
 
+  ADCTrajectory adc_trajectory_pb;
   planning_base_->RunOnce(local_view_, &adc_trajectory_pb, 
-                          &roi_boundaries_pb,
+                          &dynamic_static_obsts_pb,
                           &roi_boundary_writer_,
                           flag_trajectory,
                           &trajectory,
                           &polamp_trajectory_info);
 
-  roi_boundary_writer_->Write(roi_boundaries_pb);
+  roi_boundary_writer_->Write(dynamic_static_obsts_pb);
   if (flag_trajectory && !example_updated) {
     AWARN << "update example" << std::endl;
     example_of_adc_trajectory = &adc_trajectory_pb;
@@ -366,8 +368,8 @@ bool PlanningComponent::Proc(
     const auto& vehicle_state = injector_->vehicle_state()->vehicle_state();
     double vehicle_x = vehicle_state.x();
     double vehicle_y = vehicle_state.y();
-    roi_point originFramePointAbsoluteCoordinates = roi_boundaries_pb
-                          ->point(roi_boundaries_pb
+    roi_point originFramePointAbsoluteCoordinates = dynamic_static_obsts_pb
+                          ->point(dynamic_static_obsts_pb
                           ->point_size() - 1);
     double normalized_vehicle_x = vehicle_x 
                   - originFramePointAbsoluteCoordinates.x();
