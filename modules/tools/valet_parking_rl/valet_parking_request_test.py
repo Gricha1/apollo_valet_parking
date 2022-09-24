@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
 from ast import arg
 import sys
+import math
 import time
 import os
 import json
+import matplotlib.pyplot as plt
+import numpy as np
 from cyber.python.cyber_py3 import cyber, cyber_time
 import argparse
 import http.client
-sys.path.insert(0, "modules/tools/valet_parking_rl/POLAMP_sample_factory_/")
-from rl_utils.rl_utils import create_task
 from modules.routing.proto.routing_pb2 import RoutingRequest, LaneWaypoint
 from modules.perception.proto.perception_obstacle_pb2 import PerceptionObstacle, PerceptionObstacles
-from modules.planning.proto.planning_pb2 import roi_boundary_message
+
+sys.path.insert(0, "modules/tools/valet_parking_rl/POLAMP_sample_factory_/")
 
 parser = argparse.ArgumentParser(description='Get max steps for validation')
-parser.add_argument('-max_steps', '--max_steps', type=int, 
-                    help='max_steps = steps in env')
 parser.add_argument('-map', '--map')
 parser.add_argument('-parking_place', '--parking_place', type=int)
-parser.add_argument('-get_a_star_trajectory', '--get_a_star_trajectory', default=False,
-					type=bool)
 args = parser.parse_args()
 
 class point:
@@ -33,6 +31,42 @@ class ApolloValetParkingRequestInterface:
         self.node = cyber.Node("apollo_features")
         self.routing_writer = self.node.create_writer('/apollo/routing_request',
 		 RoutingRequest)
+     
+    def launch_control(self):
+        os.system('cyber_launch start\
+			 /apollo/modules/control/launch/control.launch &')
+    
+    def launch_routing(self):
+        os.system('cyber_launch start\
+		 /apollo/modules/routing/launch/routing.launch &')
+    
+    def launch_perception(self):
+        os.system('cyber_launch start\
+		 /apollo/modules/transform/launch/static_transform.launch &')
+
+        os.system('cyber_launch start\
+		 /apollo/modules/perception/production/launch/perception.launch &')
+    
+    def launch_prediction(self):
+        os.system('cyber_launch start\
+		 /apollo/modules/prediction/launch/prediction.launch &')
+    
+    def launch_rtk_localization(self):
+        os.system('ldconfig -p | grep libcuda.so')
+        os.system('cyber_launch start \
+		/apollo/modules/localization/launch/rtk_localization.launch &')
+    
+    def launch_planning(self):
+        os.system('cyber_launch start \
+		/apollo/modules/planning/launch/planning.launch &')
+    
+    def launch_all_modules(self):
+        self.launch_rtk_localization()
+        self.launch_perception()
+        self.launch_prediction()
+        self.launch_planning()
+        self.launch_control()
+        self.launch_routing()
     
     def send_routing_request(self, x_start, y_start, x_end, y_end):
         msg = RoutingRequest()
@@ -46,112 +80,12 @@ class ApolloValetParkingRequestInterface:
         waypoint.pose.y = float(y_end)
         time.sleep(2.0)
         self.routing_writer.write(msg)
-
-class RlTrajectoryWriter:
-    def __init__(self):
-        cyber.init()
-        self.node = cyber.Node("roi_writer")
-        self.trajectory_writer = self.node.create_writer('from_python_to_apollo', 
-														 roi_boundary_message)
-
-class RoiBoundariesReaderAndTrajecoryWriter:
-	def __init__(self, rl_trajectory_writer):
-		cyber.init()
-		self.node = cyber.Node("listener")
-		self.reader = self.node.create_reader('get_roi_boundaries_topic', 
-										roi_boundary_message, self.callback)
-		self.count_recieved_messages = 0
-		self.rl_trajectory_writer = rl_trajectory_writer
-		self.missed_count = 0
-		self.get_a_star_trajectory= False
-
-	def callback(self, data):
-		if self.missed_count < 10:
-			print("debug test python, miss count:", self.missed_count)
-			self.missed_count = self.missed_count + 1
-			return
-
-		if self.get_a_star_trajectory:
-			print("DEBUG A* trajectory")
-			trajectory_msg = roi_boundary_message()
-			trajectory_msg.timestamp = int(time.time() * 10 ** 7)
-			self.rl_trajectory_writer.trajectory_writer.write(trajectory_msg)
-			return
-
-		self.count_recieved_messages += 1
-		if self.count_recieved_messages == 1:
-			start_time_get_trajectory = time.time()
-			task = create_task(data)
-			print("debug generated task")
-			print("task:", task)
-			request_ = json.dumps({"task" : task})
-
-			c = http.client.HTTPConnection('172.17.0.2', 8080)
-			c.request('POST', '/process', request_)
-
-			respond_ = c.getresponse().read()
-			respond_ = json.loads(respond_)
-
-			rl_trajectory_info = respond_["trajectory"]
-			rl_run_info = respond_["run_info"]
-			print("generated trajectory status:", rl_run_info)
-			print("trajectory len:", len(rl_trajectory_info["x"]))
-			print("first 5 points:")
-			print("x:", rl_trajectory_info["x"][0:5])
-			print("y:", rl_trajectory_info["y"][0:5])
-			print("v:", rl_trajectory_info["v"][0:5])
-			print("steer:", rl_trajectory_info["steer"][0:5])
-			print("heading:", rl_trajectory_info["heading"][0:5])
-			print("a:", rl_trajectory_info["accelerations"][0:5])
-			print("w:", rl_trajectory_info["w"][0:5])
-			print("v_s:", rl_trajectory_info["v_s"][0:5])
-			print("last 5 points:")
-			print("x:", rl_trajectory_info["x"][-5:])
-			print("y:", rl_trajectory_info["y"][-5:])
-			print("v:", rl_trajectory_info["v"][-5:])
-			print("steer:", rl_trajectory_info["steer"][-5:])
-			print("heading:", rl_trajectory_info["heading"][-5:])
-			print("a:", rl_trajectory_info["accelerations"][-5:])
-			print("w:", rl_trajectory_info["w"][-5:])
-			print("v_s:", rl_trajectory_info["v_s"][-5:])
-			
-			trajectory_msg = roi_boundary_message()
-			trajectory_msg.timestamp = int(time.time() * 10 ** 7)
-			for x, y, v, steer, phi, a, w, v_s in zip(
-									  rl_trajectory_info["x"],
-			                          rl_trajectory_info["y"],
-									  rl_trajectory_info["v"],
-									  rl_trajectory_info["steer"],
-									  rl_trajectory_info["heading"], 
-									  rl_trajectory_info["accelerations"],
-									  rl_trajectory_info["w"],
-									  rl_trajectory_info["v_s"]):
-				next_traj_point = trajectory_msg.point.add()
-				next_traj_point.x = x
-				next_traj_point.y = y
-				next_traj_point.v = v
-				next_traj_point.steer = steer
-				next_traj_point.phi = phi
-				next_traj_point.a = a
-				next_traj_point.w = w
-				next_traj_point.v_s = v_s
-
-			end_time_get_trajectory = time.time()
-			print("time for geting trajectory in Python:", 
-					end_time_get_trajectory - start_time_get_trajectory)
-			self.rl_trajectory_writer.trajectory_writer.write(trajectory_msg)
-			
-		return
 			
 if __name__ == "__main__":
 	apollo_valet_parking_interface = ApolloValetParkingRequestInterface()
 	second_req_sent = False
 	parking_req_sent = False
 	start_time = cyber_time.Time.now().to_sec()
-	rl_trajectory_writer = RlTrajectoryWriter()
-	roi_boundary_reader = RoiBoundariesReaderAndTrajecoryWriter(rl_trajectory_writer)
-	if args.get_a_star_trajectory:
-		roi_boundary_reader.get_a_star_trajectory = True
 	while not cyber.is_shutdown():
 		tracking_time = cyber_time.Time.now().to_sec() - start_time
 		if (tracking_time > 2 and not parking_req_sent):
@@ -212,8 +146,6 @@ if __name__ == "__main__":
 			else:
 				assert 1 == 0, "please specify -map parameter: \
 						-map test, -map parking_lot"
-			roi_boundary_reader.parking_pos = point(center_parkin_place_x,
-													center_parkin_place_y)
 			waypoint1 = parking_msg.waypoint.add()
 			waypoint1.pose.x = float(x_start)
 			waypoint1.pose.y = float(y_start)
@@ -230,7 +162,5 @@ if __name__ == "__main__":
 
 
 
-
-				
 
 				

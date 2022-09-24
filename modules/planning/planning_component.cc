@@ -139,12 +139,8 @@ bool PlanningComponent::Init() {
   planning_writer_ = node_->CreateWriter<ADCTrajectory>(
       config_.topic_config().planning_trajectory_topic());
 
-  /*
-    custom changes: take boundaries from roi decider
-  */
   roi_boundary_writer_ = node_->CreateWriter<roi_boundary_message>(
       "get_roi_boundaries_topic");
-  //-------------------------------------------------
 
   rerouting_writer_ = node_->CreateWriter<RoutingRequest>(
       config_.topic_config().routing_request_topic());
