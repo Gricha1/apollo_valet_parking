@@ -64,8 +64,6 @@ class ApolloValetParkingRequestInterface:
     def __init__(self):
         cyber.init()
         self.node = cyber.Node("obst_apollo_interface")
-        self.routing_writer = self.node.create_writer('/apollo/routing_request', 
-                                                    RoutingRequest)
         self.obstacle_writer = self.node.create_writer('/apollo/perception/obstacles', 
                                                 PerceptionObstacles)
 
@@ -132,9 +130,8 @@ def setDynamicPositionAndMsgInfo(
     apollo_dynamic_obstacle.velocity.y = math.sin(new_dynamic_theta) * new_dynamic_v
     apollo_dynamic_obstacle.velocity.z = 0
     
-    # test
-    apollo_dynamic_obstacle.length = 4.565
-    apollo_dynamic_obstacle.width = 2.082
+    apollo_dynamic_obstacle.length = gym_dynamic_state.length
+    apollo_dynamic_obstacle.width = gym_dynamic_state.width
     apollo_dynamic_obstacle.height = 1.35
     tracking_time = cyber_time.Time.now().to_sec() - start_time
     apollo_dynamic_obstacle.tracking_time = tracking_time
@@ -144,7 +141,6 @@ def setDynamicPositionAndMsgInfo(
 if __name__ == '__main__':
     apollo_valet_parking_request_interface = ApolloValetParkingRequestInterface()
     apollo_stage_manager_interface = ApolloStageManagerInterface()
-    apollo_rl_interface = ApolloRLInterface()
     apollo_ego_car_reader = EgoCarPositionReader()
     
     test_tasks = getTestTasks(car_config)
