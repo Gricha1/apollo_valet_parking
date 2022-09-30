@@ -11,7 +11,8 @@ from modules.planning.proto.planning_pb2 import roi_boundary_message
 from modules.localization.proto.localization_pb2 import LocalizationEstimate
 sys.path.insert(0, "modules/tools/valet_parking_rl/POLAMP_sample_factory_/")
 from rl_utils.utils import State, Vehicle, normalizeFromZeroTo2Pi
-from dataset_generation.utlis import getTestTasks
+#from dataset_generation.utlis import getTestTasks
+from dataset_generation.apollo_dataset_utils import getApolloTestTasks
 import json
 
 with open("modules/tools/valet_parking_rl/POLAMP_sample_factory_/configs/car_configs.json", 'r') as f:
@@ -143,7 +144,10 @@ if __name__ == '__main__':
     apollo_stage_manager_interface = ApolloStageManagerInterface()
     apollo_ego_car_reader = EgoCarPositionReader()
     
-    test_tasks = getTestTasks(car_config)
+    # test
+    #test_tasks = getTestTasks(car_config)
+    test_tasks = getApolloTestTasks(car_config)
+
     current_task_in_gym_env = test_tasks[args.test_case - 1]
     _, gym_ego_start_goal_position, dynamic_dym_obstacles = current_task_in_gym_env
     gym_ego_start, _ = gym_ego_start_goal_position

@@ -70,7 +70,7 @@ else:
 print("lgsvl host:", os.environ.get("LGSVL__SIMULATOR_HOST", "127.0.0.1"))
 print("lgsvl port:", os.environ.get("LGSVL__SIMULATOR_PORT", 8181))
 
-#------------------------------Добавление Агента------------------------------
+# Add agent
 vehicle_id = "70f2a06e-2b44-45bb-a6d7-d1d1b8813bcc"
 spawns = sim.get_spawn()
 egoState = lgsvl.AgentState()
